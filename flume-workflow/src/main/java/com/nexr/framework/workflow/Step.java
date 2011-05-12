@@ -23,10 +23,34 @@ public class Step {
 	}
 	
 	@Override
+	public int hashCode() {
+		if (name == null) {
+			return super.hashCode();
+		}
+		return name.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (name == null || obj == null) {
+			return false;
+		}
+		if (obj == this) {
+			return true;
+		}
+		if (obj instanceof Step) {
+			if (name.equals(((Step) obj).getName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@Override
 	public String toString() {
 		return new StringBuilder().append("step[name: ").append(name)
 			.append(", next: ").append(next)
-			.append(", tasklet: ").append(tasklet.getSimpleName())
+			.append(", tasklet: ").append(tasklet == null ? null : tasklet.getSimpleName())
 			.append("]").toString();
 	}
 

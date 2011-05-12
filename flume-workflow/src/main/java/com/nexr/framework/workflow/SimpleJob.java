@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author dani.kim@nexr.com
  */
-public class SimpleJob extends Job {
+public class SimpleJob extends AbstractJob {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	public SimpleJob() {
@@ -22,44 +22,45 @@ public class SimpleJob extends Job {
 	}
 	
 	@Override
-	protected void doExecute(JobExecution execution) throws Exception {
+	protected void doExecute(JobExecution execution) throws JobExecutionException {
 		StepContext context = new StepContext();
+		context.setJobExecution(execution);
 		context.setConfig(new StepContext.Config(getParameters()));
 
 		Workflow workflow = execution.getWorkflow();
-		for (Step step : getSteps()) {
+		Steps steps = getSteps();
+		if (execution.isRecoveryMode()) {
+			steps = Steps.different(workflow.getSteps(), workflow.getFootprints());
+		}
+		LOG.info("Job orders : {}", steps);
+		for (Step step : steps) {
 			workflow.addStep(step);
 			try {
-				steplistener.beforeStep(step, context);
+				if (steplistener != null) {
+					steplistener.beforeStep(step, context);
+				}
 			} catch (Exception e) {
-				LOG.warn("exception encountered in before callback of step", e);
+				LOG.warn("Exception encountered in before callback of step", e);
 			}
-			Tasklet tasklet = step.getTasklet().newInstance();
+			Tasklet tasklet;
 			try {
+				tasklet = step.getTasklet().newInstance();
 				tasklet.run(context);
-				steplistener.afterStep(step, context);
 			} catch (Exception e) {
-				LOG.warn("exception encountered in after callback of step", e);
+				throw new JobExecutionException(e);
+			}
+			try {
+				if (steplistener != null) {
+					steplistener.afterStep(step, context);
+				}
+			} catch (Exception e) {
+				LOG.warn("Exception encountered in after callback of step", e);
 				try {
 					steplistener.caught(step, context, e);
 				} catch (Exception e2) {
-					LOG.warn("exception encountered in caught callback of step", e);
+					LOG.warn("Exception encountered in caught callback of step", e);
 				}
 			}
 		}
-//		if (workflow == null) {
-//			workflow = new Workflow(this);
-//			execution.setWorkflow(workflow);
-//		}
-//		Step currentStep = workflow.forward(null);
-//		while (true) {
-//			LOG.info("start step {}, {}", this, currentStep);
-//			String next = stepHandler.execute(currentStep, context);
-//			LOG.info("end step {}, {}", this, currentStep);
-//			currentStep = workflow.forward(next);
-//			if (currentStep == null) {
-//				break;
-//			}
-//		}
 	}
 }

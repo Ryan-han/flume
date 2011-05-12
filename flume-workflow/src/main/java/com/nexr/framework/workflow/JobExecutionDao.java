@@ -6,4 +6,6 @@ public interface JobExecutionDao {
 	JobExecution saveJobExecution(Job job);
 
 	JobExecution updateJobExecution(JobExecution execution);
+
+	StepExecution updateStepExecution(JobExecution execution, Step step);
 }

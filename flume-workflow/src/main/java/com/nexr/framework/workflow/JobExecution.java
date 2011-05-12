@@ -4,11 +4,26 @@ package com.nexr.framework.workflow;
  * @author dani.kim@nexr.com
  */
 public class JobExecution {
+	private Job job;
+	private String key;
 	private JobStatus status;
 	private StepContext context;
 	private Workflow workflow;
+	private boolean recoveryMode;
 	
 	public JobExecution() {
+	}
+	
+	public JobExecution(Job job) {
+		this.job = job;
+	}
+	
+	public boolean isRecoveryMode() {
+		return recoveryMode;
+	}
+	
+	public void setRecoveryMode(boolean recoveryMode) {
+		this.recoveryMode = recoveryMode;
 	}
 
 	public synchronized JobStatus getStatus() {
@@ -35,4 +50,22 @@ public class JobExecution {
 	public void setContext(StepContext context) {
 		this.context = context;
 	}
+	
+	public Job getJob() {
+		return job;
+	}
+	
+	public void setJob(Job job) {
+		this.job = job;
+	}
+
+	public String getKey() {
+		return key;
+	}
+
+	public void setKey(String key) {
+		this.key = key;
+	}
 }
+
+

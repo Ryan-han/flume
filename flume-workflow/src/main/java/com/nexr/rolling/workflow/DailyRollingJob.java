@@ -11,35 +11,37 @@ import com.nexr.framework.workflow.Step;
 import com.nexr.framework.workflow.StepContext;
 import com.nexr.framework.workflow.Steps;
 import com.nexr.framework.workflow.listener.StepExecutionListener;
-import com.nexr.rolling.workflow.hourly.CleanUpTasklet;
-import com.nexr.rolling.workflow.hourly.FinishingTasklet;
-import com.nexr.rolling.workflow.hourly.InitTasklet;
-import com.nexr.rolling.workflow.hourly.PrepareTasklet;
+import com.nexr.rolling.workflow.daily.CleanUpTasklet;
+import com.nexr.rolling.workflow.daily.FinishingTasklet;
+import com.nexr.rolling.workflow.daily.InitTasklet;
+import com.nexr.rolling.workflow.daily.PrepareTasklet;
+import com.nexr.rolling.workflow.daily.RunDailyTasklet;
 
 /**
  * @author dani.kim@nexr.com
  */
-public class HourlyRollingJob extends SimpleJob {
-	private static final Logger LOG = LoggerFactory.getLogger(HourlyRollingJob.class);
+@Deprecated
+public class DailyRollingJob extends SimpleJob {
+	private static final Logger LOG = LoggerFactory.getLogger(DailyRollingJob.class);
 	private final static Steps steps = new Steps();
 	
 	static {
 		steps.add(new Step("init", InitTasklet.class));
 		steps.add(new Step("prepare", PrepareTasklet.class));
-//		steps.add(new Step("run", RunHourlyTasklet.class));
+		steps.add(new Step("run", RunDailyTasklet.class));
 		steps.add(new Step("finishing", FinishingTasklet.class));
 		steps.add(new Step("cleanUp", CleanUpTasklet.class));
 	}
 
-	public HourlyRollingJob() {
-		super("hourlyRollingJob", steps, true);
+	public DailyRollingJob() {
+		super("dailyRollingJob", steps, true);
 	}
 	
 	public static void main(String[] args) throws Exception {
 		ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("classpath:workflow-app.xml");
 		JobLauncher launcher = context.getBean(JobLauncher.class);
 
-		HourlyRollingJob job = new HourlyRollingJob();
+		DailyRollingJob job = new DailyRollingJob();
 		job.setStepExecutionListener(new StepExecutionListener() {
 			@Override
 			public void beforeStep(Step step, StepContext context) {
@@ -53,19 +55,13 @@ public class HourlyRollingJob extends SimpleJob {
 			
 			@Override
 			public void caught(Step step, StepContext context, Throwable cause) {
-				System.out.println(cause);
-				System.out.println(cause);
-				System.out.println(cause);
-				System.out.println(cause);
-				System.out.println(cause);
-				System.out.println(cause);
 			}
 		});
 		job.setExecutionDao(new ZKJobExecutionDao());
-		job.addParameter(RollingConstants.HOURLY_MR_RAW_PATH, "/nexr/rolling/hourly/raw");
-		job.addParameter(RollingConstants.HOURLY_MR_INPUT_PATH, "/nexr/rolling/hourly/input");
-		job.addParameter(RollingConstants.HOURLY_MR_OUTPUT_PATH, "/nexr/rolling/hourly/output");
 		job.addParameter(RollingConstants.HOURLY_MR_RESULT_PATH, "/nexr/rolling/hourly/result");
+		job.addParameter(RollingConstants.DAILY_MR_INPUT_PATH, "/nexr/rolling/daily/input");
+		job.addParameter(RollingConstants.DAILY_MR_OUTPUT_PATH, "/nexr/rolling/daily/output");
+		job.addParameter(RollingConstants.DAILY_MR_RESULT_PATH, "/nexr/rolling/daily/result");
 		
 		JobExecution execution = launcher.run(job);
 		LOG.info("Workflow : {}", execution.getWorkflow());

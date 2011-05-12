@@ -14,6 +14,20 @@ public class Steps implements Iterable<Step> {
 	private List<Step> steps;
 	private Map<String, Step> stepMap;
 	
+	/**
+	 * steps1 과 steps2 의 차집합
+	 * @param steps1
+	 * @param steps2
+	 * @return
+	 */
+	public static Steps different(Steps steps1, Steps steps2) {
+		Steps diff = new Steps(steps1);
+		for (Step step : steps2) {
+			diff.remove(step);
+		}
+		return diff;
+	}
+	
 	public Steps() {
 		this(new ArrayList<Step>());
 	}
@@ -42,7 +56,13 @@ public class Steps implements Iterable<Step> {
 	
 	@Override
 	public String toString() {
-		return steps.toString();
+		StringBuilder sb = new StringBuilder();
+		boolean first = true;
+		for (Step step : steps) {
+			sb.append(first ? "" : " > ").append(step.getName());
+			first = false;
+		}
+		return sb.toString();
 	}
 	
 	public Steps add(Step step) {
@@ -50,24 +70,11 @@ public class Steps implements Iterable<Step> {
 		return this;
 	}
 	
-	public Step first() {
-		if (steps.size() > 0) {
-			return steps.get(0);
-		}
-		return null;
+	public Steps remove(Step step) {
+		this.steps.remove(step);
+		return this;
 	}
 	
-	public Step last() {
-		if (steps.size() > 0) {
-			return steps.get(steps.size() - 1);
-		}
-		return null;
-	}
-
-	public Step get(String name) {
-		return stepMap.get(name);
-	}
-
 	@Override
 	public Iterator<Step> iterator() {
 		return steps.iterator();

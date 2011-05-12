@@ -16,6 +16,7 @@ import com.nexr.rolling.workflow.RollingConstants;
 /**
  * @author dani.kim@nexr.com
  */
+@Deprecated
 public class PrepareTasklet extends DFSTasklet {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 

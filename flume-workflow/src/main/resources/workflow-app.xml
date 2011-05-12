@@ -10,8 +10,23 @@
 		http://www.springframework.org/schema/lang http://www.springframework.org/schema/lang/spring-lang-3.0.xsd
 		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd
 		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
-
 	<context:annotation-config />
-	<context:component-scan base-package="com.nexr.framework.workflow,com.nexr.rolling.workflow" />
-	<bean id="hourlyRollingJob" class="com.nexr.rolling.workflow.HourlyRollingJob" />
+	
+	<bean id="launcher" class="com.nexr.framework.workflow.JobLauncherImpl" p:executionDao-ref="jobExecutionDao" />
+	<bean id="jobExecutionDao" class="com.nexr.rolling.workflow.ZKJobExecutionDao" />
+
+	<bean id="jobExecutionListener" class="com.nexr.rolling.workflow.JobExecutionListenerImpl" />
+	<bean id="stepExecutionListener" class="com.nexr.rolling.workflow.StepExecutionListenerImpl" />
+	
+	<bean id="rollingJob" class="com.nexr.rolling.workflow.RollingJob" 
+		p:jobExecutionListener-ref="jobExecutionListener"
+		p:stepExecutionListener-ref="stepExecutionListener" />
+
+	<bean id="hourlyRollingJob" class="com.nexr.rolling.workflow.HourlyRollingJob" 
+		p:jobExecutionListener-ref="jobExecutionListener"
+		p:stepExecutionListener-ref="stepExecutionListener" />
+	
+	<bean id="dailyRollingJob" class="com.nexr.rolling.workflow.DailyRollingJob" 
+		p:jobExecutionListener-ref="jobExecutionListener"
+		p:stepExecutionListener-ref="stepExecutionListener" />
 </beans>

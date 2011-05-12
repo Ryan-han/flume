@@ -1,4 +1,4 @@
-package com.nexr.rolling.workflow.hourly;
+package com.nexr.rolling.workflow;
 
 import java.io.IOException;
 
@@ -12,7 +12,6 @@ import com.nexr.rolling.workflow.RollingConstants;
 /**
  * @author dani.kim@nexr.com
  */
-@Deprecated
 public class InitTasklet extends DFSTasklet {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
@@ -21,8 +20,8 @@ public class InitTasklet extends DFSTasklet {
 	}
 	
 	public String run(com.nexr.framework.workflow.StepContext context) {
-		Path input = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_INPUT_PATH, null));
-		Path output = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_OUTPUT_PATH, null));
+		Path input = new Path(context.getConfig().get(RollingConstants.INPUT_PATH, null));
+		Path output = new Path(context.getConfig().get(RollingConstants.OUTPUT_PATH, null));
 		try {
 			if (!fs.exists(input)) {
 				fs.mkdirs(input);
@@ -33,7 +32,7 @@ public class InitTasklet extends DFSTasklet {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		LOG.info("Success Initialization : Create " + input.getName());
+		LOG.info("Rolling Job Success Initialization : Input: " + input.getName());
 		return "prepare";
 	}
 }

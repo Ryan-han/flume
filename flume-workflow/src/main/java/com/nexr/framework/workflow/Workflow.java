@@ -7,12 +7,17 @@ public class Workflow {
 	private Steps steps;
 	private Steps footprints;
 	private String current;
-
+	
+	public Workflow(Steps steps, Steps footprints) {
+		this.steps = steps;
+		this.footprints = footprints;
+	}
+	
 	public Workflow(Job job) {
 		steps = new Steps(job.getSteps());
 		footprints = new Steps();
 	}
-	
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -33,6 +38,14 @@ public class Workflow {
 	
 	public void addStep(Step step) {
 		footprints.add(step);
+	}
+	
+	public synchronized Steps getSteps() {
+		return new Steps(steps);
+	}
+	
+	public synchronized Steps getFootprints() {
+		return new Steps(footprints);
 	}
 	
 //	public void setCurrent(String current) {
