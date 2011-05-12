@@ -26,7 +26,9 @@ import com.cloudera.flume.conf.LogicalNodeContext;
 import com.cloudera.flume.conf.SinkFactory.SinkBuilder;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.handlers.avro.AvroEventSink;
+import com.cloudera.flume.handlers.cp.TagCheckerTrigger;
 import com.cloudera.flume.handlers.thrift.ThriftEventSink;
+import com.google.common.base.Preconditions;
 
 /**
  * This is a sink that is used to send events through an RPC, it either uses
@@ -46,7 +48,7 @@ public class RpcSink extends EventSink.Base {
       public EventSink build(Context context, String... args) {
         if (args.length > 2) {
           throw new IllegalArgumentException(
-              "usage: rpcSink([hostname, [portno]]) ");
+              "usage: rpcSink([hostname, [portno]] {, useCheckpoint=true|false}) ");
         }
         String host = FlumeConfiguration.get().getCollectorHost();
         int port = FlumeConfiguration.get().getCollectorPort();
@@ -61,60 +63,27 @@ public class RpcSink extends EventSink.Base {
          * I am hoping here that master calls this builder and at that time the
          * FlumeConfiguration is all set.
          */
+        EventSink snk; 
+        
         if (FlumeConfiguration.get().getEventRPC().equals(
             FlumeConfiguration.RPC_TYPE_THRIFT)) {
-          return new ThriftEventSink(host, port);
-        }
-        if (FlumeConfiguration.get().getEventRPC().equals(
+        	snk = new ThriftEventSink(host, port);
+        } else if (FlumeConfiguration.get().getEventRPC().equals(
             FlumeConfiguration.RPC_TYPE_AVRO)) {
-          return new AvroEventSink(host, port);
+          snk = new AvroEventSink(host, port);
+        } else {
+        	LOG.warn("event.rpc.type not defined.  It should be either"
+        			+ " \"THRIFT\" or \"AVRO\". Defaulting to Thrift");
+        	snk = new ThriftEventSink(host, port);
         }
-        LOG.warn("event.rpc.type not defined.  It should be either"
-            + " \"THRIFT\" or \"AVRO\". Defaulting to Thrift");
-        return new ThriftEventSink(host, port);
+        
+        if(context.getValue(TagCheckerTrigger.USE_CHECKPOINT) != null) {
+        	if("true".equals(context.getValue(TagCheckerTrigger.USE_CHECKPOINT).trim())) {
+  					snk = TagCheckerTrigger.registTagCheckerTrigger(snk, context, host);
+        	}
+        }
+        return snk;
       }
     };
-  }
-  
-  public static SinkBuilder cpBuilder() {
-	  return new SinkBuilder() {
-
-		@Override
-		public EventSink build(Context context, String... args) {
-	        if (args.length > 3) {
-	            throw new IllegalArgumentException(
-	                "usage: checkpointRpcSink([hostname, [portno, [checkpointPort]]) ");
-	          }
-	          String host = FlumeConfiguration.get().getCollectorHost();
-	          int port = FlumeConfiguration.get().getCollectorPort();
-	          int cpPort = FlumeConfiguration.get().getCheckPointPort();
-	          if (args.length >= 1) {
-	            host = args[0];
-	          }
-
-	          if (args.length >= 2) {
-	            port = Integer.parseInt(args[1]);
-	          }
-	          
-	          if(args.length >= 3) {
-	        	  cpPort = Integer.parseInt(args[2]);
-	          }
-	          /*
-	           * I am hoping here that master calls this builder and at that time the
-	           * FlumeConfiguration is all set.
-	           */
-	          if (FlumeConfiguration.get().getEventRPC().equals(
-	              FlumeConfiguration.RPC_TYPE_THRIFT)) {
-	            return new ThriftEventSink(host, port, false, true, cpPort, context.getValue(LogicalNodeContext.C_LOGICAL));
-	          }
-	          if (FlumeConfiguration.get().getEventRPC().equals(
-	              FlumeConfiguration.RPC_TYPE_AVRO)) {
-	            return new AvroEventSink(host, port); //TODO  do implement like thriftRpc (about checkpoint)
-	          }
-	          LOG.warn("event.rpc.type not defined.  It should be either"
-	              + " \"THRIFT\" or \"AVRO\". Defaulting to Thrift");
-	          return new ThriftEventSink(host, port, false, true, cpPort);
-		}
-	  };
   }
 }

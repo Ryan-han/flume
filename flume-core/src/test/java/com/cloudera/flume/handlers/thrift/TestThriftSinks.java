@@ -45,6 +45,7 @@ import com.cloudera.flume.core.EventImpl;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.core.EventSource;
 import com.cloudera.flume.core.EventUtil;
+import com.cloudera.flume.handlers.cp.TagCheckerTrigger;
 import com.cloudera.flume.handlers.debug.MemorySinkSource;
 import com.cloudera.flume.handlers.debug.NoNlASCIISynthSource;
 import com.cloudera.flume.reporter.ReportEvent;
@@ -291,12 +292,9 @@ public class TestThriftSinks implements ExampleData {
   @Test
   public void testCheckpointThrfitOpenAndClose() throws IOException, InterruptedException {
 	  final String NODE_NAME="node1";
-	  final int cpPort = 9999;
 	  final String host = "localhost";
 	  
-	  Context ctx = new LogicalNodeContext(NODE_NAME, NODE_NAME);
-	  
-	  
+	  Context ctx = new CPContext(NODE_NAME, NODE_NAME);
 	  
 	  CheckPointManager cpManager = Mockito.mock(CheckPointManager.class);
 	  BenchmarkHarness.setupFlumeNode(null, null, null, null, null, cpManager);
@@ -305,9 +303,9 @@ public class TestThriftSinks implements ExampleData {
 	  try {
 		  tes = new ThriftEventSource(54321);
 		  tes.open();
-		  EventSink snk = ThriftEventSink.cPbuilder().build(ctx, host, "54321", Integer.toString(cpPort));
+		  EventSink snk = ThriftEventSink.builder().build(ctx, host, "54321");
 		  snk.open();
-		  Mockito.verify(cpManager).startTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL), host, cpPort);
+		  Mockito.verify(cpManager).startTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL), host, FlumeConfiguration.get().getCheckPointPort());
 		  snk.close();
 		  Mockito.verify(cpManager).stopTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL));
 	  } finally {
@@ -315,6 +313,13 @@ public class TestThriftSinks implements ExampleData {
 			  tes.close();
 		  }
 	  }
+  }
+  
+  class CPContext extends LogicalNodeContext {
+  	public CPContext(String pName, String lName) {
+  		super(pName, lName);
+  		putValue(TagCheckerTrigger.USE_CHECKPOINT, "true");
+  	}
   }
 
   /**

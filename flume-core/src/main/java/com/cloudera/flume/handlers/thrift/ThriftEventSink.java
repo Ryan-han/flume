@@ -30,7 +30,6 @@ import org.apache.thrift.transport.TTransportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cloudera.flume.agent.FlumeNode;
 import com.cloudera.flume.conf.Context;
 import com.cloudera.flume.conf.FlumeConfiguration;
 import com.cloudera.flume.conf.LogicalNodeContext;
@@ -38,6 +37,7 @@ import com.cloudera.flume.conf.SinkFactory.SinkBuilder;
 import com.cloudera.flume.core.Event;
 import com.cloudera.flume.core.EventImpl;
 import com.cloudera.flume.core.EventSink;
+import com.cloudera.flume.handlers.cp.TagCheckerTrigger;
 import com.cloudera.flume.handlers.thrift.ThriftFlumeEventServer.Client;
 import com.cloudera.flume.reporter.ReportEvent;
 import com.google.common.base.Preconditions;
@@ -48,176 +48,123 @@ import com.nexr.agent.cp.CheckPointManager;
  */
 public class ThriftEventSink extends EventSink.Base {
 
-  static final Logger LOG = LoggerFactory.getLogger(ThriftEventSink.class);
+	static final Logger LOG = LoggerFactory.getLogger(ThriftEventSink.class);
 
-  final public static String A_SERVERHOST = "serverHost";
-  final public static String A_SERVERPORT = "serverPort";
-  final public static String A_SENTBYTES = "sentBytes";
+	final public static String A_SERVERHOST = "serverHost";
+	final public static String A_SERVERPORT = "serverPort";
+	final public static String A_SENTBYTES = "sentBytes";
 
-  static String logicalNodeName;
-  String host;
-  int port;
-  int checkpointPort;
-  Client client;
-  TTransport transport;
-  TStatsTransport stats;
-  boolean nonblocking;
-  boolean useCheckpoint;
+	String host;
+	int port;
+	Client client;
+	TTransport transport;
+	TStatsTransport stats;
+	boolean nonblocking;
 
-  AtomicLong sentBytes = new AtomicLong();
+	AtomicLong sentBytes = new AtomicLong();
 
+	public ThriftEventSink(String host, int port, boolean nonblocking) {
+		this.host = host;
+		this.port = port;
+		this.nonblocking = nonblocking;
+	}
 
-  public ThriftEventSink(String host, int port, boolean nonblocking, boolean useCheckpoint, int checkpointPort) {
-	  this(host, port, nonblocking, useCheckpoint, checkpointPort, "Unknown");
-  }
-  
-  public ThriftEventSink(String host, int port, boolean nonblocking, boolean useCheckpoint, int checkpointPort, 
-		  String logicalNodeName) {
-	  this.host = host;
-	  this.port = port;
-	  this.nonblocking = nonblocking;
-	  this.useCheckpoint = useCheckpoint;
-	  this.checkpointPort = checkpointPort;
-	  this.logicalNodeName = logicalNodeName;
-  }
-  
-  public ThriftEventSink(String host, int port, boolean nonblocking, boolean useCheckpoint) {
-	  this(host, port, nonblocking, useCheckpoint, 0);
-  }
-  
-  public ThriftEventSink(String host, int port, boolean nonblocking) {
-	  this(host, port, nonblocking, false);
-  }
+	public ThriftEventSink(String host, int port) {
+		this(host, port, false);
+	}
 
-  public ThriftEventSink(String host, int port) {
-	  this(host, port, false);
-  }
-
-  @Override
-  public void append(Event e) throws IOException, InterruptedException {
-    ThriftFlumeEvent tfe = ThriftEventAdaptor.convert(e);
-    try {
-      client.append(tfe);
-      sentBytes.set(stats.getBytesWritten());
-      super.append(e);
-    } catch (TException e1) {
-      throw new IOException("Append failed " + e1.getMessage(), e1);
-    }
-  }
-
-  @Override
-  public void close() throws IOException {
-    if (transport != null) {
-      transport.close();
-      transport = null;
-      LOG.info("ThriftEventSink on port " + port + " closed");
-    }
-    if(useCheckpoint) {
-    	FlumeNode.getInstance().getCheckPointManager().stopTagChecker(logicalNodeName);
-    }
-  }
-
-  @Override
-  public void open() throws IOException {
-
-    try {
-      int timeout = FlumeConfiguration.get().getThriftSocketTimeoutMs();
-      if (nonblocking) {
-        // non blocking must use "Framed transport"
-        transport = new TSocket(host, port, timeout);
-        stats = new TStatsTransport(transport);
-        transport = new TFramedTransport(stats);
-      } else {
-        transport = new TSocket(host, port, timeout);
-        stats = new TStatsTransport(transport);
-        transport = stats;
-      }
-
-      TProtocol protocol = new TBinaryProtocol(transport);
-      transport.open();
-      client = new Client(protocol);
-      LOG.info("ThriftEventSink to {}:{} opened", host, port);
-
-    } catch (TTransportException e) {
-      throw new IOException("Failed to open thrift event sink to " + host + ":"
-          + port + " : " + e.getMessage());
-    }
-    
-    if(useCheckpoint) {
-    	FlumeNode.getInstance().getCheckPointManager().setCollectorHost(host);
-    	FlumeNode.getInstance().getCheckPointManager().startTagChecker(logicalNodeName, host, checkpointPort);
-    }
-  }
-
-  @Override
-  public ReportEvent getMetrics() {
-    ReportEvent rpt = super.getMetrics();
-    rpt.setStringMetric(A_SERVERHOST, host);
-    rpt.setLongMetric(A_SERVERPORT, port);
-    rpt.setLongMetric(A_SENTBYTES, sentBytes.get());
-    return rpt;
-  }
-
-  @Deprecated
-  @Override
-  public ReportEvent getReport() {
-    ReportEvent rpt = super.getReport();
-    rpt.setStringMetric(A_SERVERHOST, host);
-    rpt.setLongMetric(A_SERVERPORT, port);
-    rpt.setLongMetric(A_SENTBYTES, sentBytes.get());
-    return rpt;
-  }
-
-  public static SinkBuilder builder() {
-    return new SinkBuilder() {
-      @Override
-      public EventSink build(Context context, String... args) {
-        if (args.length > 2) {
-          throw new IllegalArgumentException(
-              "usage: thriftSink([hostname, [portno]]) ");
-        }
-        String host = FlumeConfiguration.get().getCollectorHost();
-        int port = FlumeConfiguration.get().getCollectorPort();
-        if (args.length >= 1) {
-          host = args[0];
-        }
-
-        if (args.length >= 2) {
-          port = Integer.parseInt(args[1]);
-        }
-        return new ThriftEventSink(host, port);
-      }
-    };
-  }
-  
-  public static SinkBuilder cPbuilder() {
-	  return new SinkBuilder() {
-
-		@Override
-		public EventSink build(Context context, String... args) {
-			if (args.length > 3) {
-				throw new IllegalArgumentException(
-					"usage: checkpointThriftSink([hostname, [portno, [checkpointportno]]) ");
-			}
-			
-			Preconditions.checkNotNull(context.getValue(LogicalNodeContext.C_LOGICAL), 
-					"Logical Node name is null");
-			logicalNodeName = context.getValue(LogicalNodeContext.C_LOGICAL);
-	        
-			String host = FlumeConfiguration.get().getCollectorHost();
-	        int port = FlumeConfiguration.get().getCollectorPort();
-	        int cpPort = FlumeConfiguration.get().getCheckPointPort();
-	        if (args.length >= 1) {
-	          host = args[0];
-	        }
-	        if (args.length >= 2) {
-	          port = Integer.parseInt(args[1]);
-	        }
-	        if (args.length >= 3) {
-	        	cpPort = Integer.parseInt(args[2]);
-	        }
-	        return new ThriftEventSink(host, port, false, true, cpPort, logicalNodeName);
+	@Override
+	public void append(Event e) throws IOException, InterruptedException {
+		ThriftFlumeEvent tfe = ThriftEventAdaptor.convert(e);
+		try {
+			client.append(tfe);
+			sentBytes.set(stats.getBytesWritten());
+			super.append(e);
+		} catch (TException e1) {
+			throw new IOException("Append failed " + e1.getMessage(), e1);
 		}
-	  };
-  }
+	}
+
+	@Override
+	public void close() throws IOException, InterruptedException {
+		if (transport != null) {
+			transport.close();
+			transport = null;
+			LOG.info("ThriftEventSink on port " + port + " closed");
+		}
+		super.close();
+	}
+
+	@Override
+	public void open() throws IOException, InterruptedException {
+		try {
+			int timeout = FlumeConfiguration.get().getThriftSocketTimeoutMs();
+			if (nonblocking) {
+				// non blocking must use "Framed transport"
+				transport = new TSocket(host, port, timeout);
+				stats = new TStatsTransport(transport);
+				transport = new TFramedTransport(stats);
+			} else {
+				transport = new TSocket(host, port, timeout);
+				stats = new TStatsTransport(transport);
+				transport = stats;
+			}
+
+			TProtocol protocol = new TBinaryProtocol(transport);
+			transport.open();
+			client = new Client(protocol);
+			LOG.info("ThriftEventSink to {}:{} opened", host, port);
+
+		} catch (TTransportException e) {
+			throw new IOException("Failed to open thrift event sink to " + host + ":" + port + " : " + e.getMessage());
+		}
+		super.open();
+	}
+
+	@Override
+	public ReportEvent getMetrics() {
+		ReportEvent rpt = super.getMetrics();
+		rpt.setStringMetric(A_SERVERHOST, host);
+		rpt.setLongMetric(A_SERVERPORT, port);
+		rpt.setLongMetric(A_SENTBYTES, sentBytes.get());
+		return rpt;
+	}
+
+	@Deprecated
+	@Override
+	public ReportEvent getReport() {
+		ReportEvent rpt = super.getReport();
+		rpt.setStringMetric(A_SERVERHOST, host);
+		rpt.setLongMetric(A_SERVERPORT, port);
+		rpt.setLongMetric(A_SENTBYTES, sentBytes.get());
+		return rpt;
+	}
+
+	public static SinkBuilder builder() {
+		return new SinkBuilder() {
+			@Override
+			public EventSink build(Context context, String... args) {
+				if (args.length > 2) {
+					throw new IllegalArgumentException("usage: thriftSink([hostname, [portno]] {, useCheckpoint=ture|false) ");
+				}
+				String host = FlumeConfiguration.get().getCollectorHost();
+				int port = FlumeConfiguration.get().getCollectorPort();
+				if (args.length >= 1) {
+					host = args[0];
+				}
+
+				if (args.length >= 2) {
+					port = Integer.parseInt(args[1]);
+				}
+	
+				EventSink snk = new ThriftEventSink(host, port); 
+				if(context.getValue(TagCheckerTrigger.USE_CHECKPOINT) != null) {
+						if("true".equals(context.getValue(TagCheckerTrigger.USE_CHECKPOINT).trim())) {
+								snk = TagCheckerTrigger.registTagCheckerTrigger(snk, context, host);
+						}
+				}
+				return snk;
+			}
+		};
+	}
 }
