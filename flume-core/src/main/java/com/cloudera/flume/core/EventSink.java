@@ -18,6 +18,9 @@
 package com.cloudera.flume.core;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import com.cloudera.flume.conf.Context;
@@ -63,11 +66,36 @@ public interface EventSink extends Reportable {
    */
   public void close() throws IOException, InterruptedException;
 
+ 
+  /**
+   * EventSink가 open, close 메소드가 호출 될 때 메세지를 받는 리스너를 등록한다.
+   * @param listener
+   */
+  public void addListener(EventSinkListener listener);
+  
+  /**
+   * EventSink가 open, close 메소드가 호출 될 때 메세지를 받는 리스너를 등록한다.
+   * @param listenerList
+   */
+  public void addListeners(Collection<EventSinkListener> listenerList);
+  
+  /**
+   * #listener를 리스너 목록에서 삭제한다. 
+   * @param listener
+   */
+  public void removeListener(EventSinkListener listener);
+  
+  /**
+   * 등록된 모든 리스너를 삭제한다.
+   */
+  public void removeAllListener();
+
   /**
    * Generate a simplified report. This only gathers a limited number of metrics
    * about the particular sink, and does not hierarchically gather information
    * from subsinks.
    */
+
   @Deprecated
   public ReportEvent getReport();
 
@@ -94,6 +122,8 @@ public interface EventSink extends Reportable {
     /** total number bytes appended to this sink */
     private long numBytes = 0;
 
+    private List<EventSinkListener> listeners;
+    
     /**
      * {@inheritDoc}
      */
@@ -115,6 +145,11 @@ public interface EventSink extends Reportable {
      */
     @Override
     public void close() throws IOException, InterruptedException {
+    	if(listeners != null) {
+    		for(EventSinkListener l : listeners) {
+    			l.close();
+    		}
+    	}
     }
 
     /**
@@ -122,9 +157,47 @@ public interface EventSink extends Reportable {
      */
     @Override
     public void open() throws IOException, InterruptedException {
+    	if(listeners != null) {
+    		for(EventSinkListener l : listeners) {
+    			l.open();
+    		}
+    	}
     }
+    
+    @Override
+	public void addListener(EventSinkListener listener) {
+    	if(listeners == null) {
+    		listeners = new ArrayList<EventSinkListener>();
+    	}
+		listeners.add(listener);
+	}
 
-    /**
+	@Override
+	public void addListeners(Collection<EventSinkListener> newList) {
+		if(listeners == null) {
+    		listeners = new ArrayList<EventSinkListener>();
+    	}
+		listeners.addAll(newList);
+	}
+
+	@Override
+	public void removeListener(EventSinkListener listener) {
+		if(listeners == null) {
+    		listeners = new ArrayList<EventSinkListener>();
+    		return;
+    	}
+		listeners.remove(listener);
+	}
+
+	@Override
+	public void removeAllListener() {
+		if(listeners == null) {
+			return;
+		}
+		listeners.removeAll(listeners);
+	}
+
+	/**
      * {@inheritDoc}
      */
     @Override
