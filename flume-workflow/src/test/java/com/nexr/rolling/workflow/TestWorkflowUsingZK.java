@@ -24,7 +24,7 @@ import com.nexr.framework.workflow.listener.StepExecutionListener;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "classpath:workflow-app.xml")
-public class TestRollingWorkflow extends JobTestBase {
+public class TestWorkflowUsingZK extends JobTestBase {
 	@Resource
 	private JobLauncher launcher;
 	

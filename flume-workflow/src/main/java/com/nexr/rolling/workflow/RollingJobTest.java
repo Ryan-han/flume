@@ -12,11 +12,21 @@ import com.nexr.rolling.workflow.job.RollingJob;
 /**
  * @author dani.kim@nexr.com
  */
-@Deprecated
-public class HourlyRollingJob {
-	public static void main(String[] args) throws Exception {
+public class RollingJobTest {
+	public static void main(String[] args) {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:workflow-app.xml");
 		JobLauncher launcher = ctx.getBean(JobLauncher.class);
+		RollingJob job = createRollingJob(ctx);
+		
+		try {
+			launcher.run(job);
+		} catch (com.nexr.framework.workflow.JobExecutionException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static RollingJob createRollingJob(
+			ClassPathXmlApplicationContext ctx) {
 		RollingJob job = ctx.getBean(RollingJob.class);
 		
 		job.addParameter(RollingConstants.JOB_TYPE, "hourly");
@@ -28,11 +38,6 @@ public class HourlyRollingJob {
 		job.addParameter(RollingConstants.INPUT_PATH, "/nexr/rolling/hourly/input");
 		job.addParameter(RollingConstants.OUTPUT_PATH, "/nexr/rolling/hourly/output");
 		job.addParameter(RollingConstants.RESULT_PATH, "/nexr/rolling/hourly/result");
-		
-		try {
-			launcher.run(job);
-		} catch (com.nexr.framework.workflow.JobExecutionException e) {
-			e.printStackTrace();
-		}
+		return job;
 	}
 }

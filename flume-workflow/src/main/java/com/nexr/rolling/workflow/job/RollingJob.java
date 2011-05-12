@@ -1,4 +1,4 @@
-package com.nexr.rolling.workflow;
+package com.nexr.rolling.workflow.job;
 
 import com.nexr.framework.workflow.SimpleJob;
 import com.nexr.framework.workflow.Step;

@@ -50,8 +50,10 @@ public class ConfigUpdate {
 		zkClient = new ZkClient(conf.getZookeeperServers(), 30000,
 				conf.getZookeeperSessionTimeout());
 		zkClient.getEventLock().lock();
-		if (!zkClient.exists(rollingConfigPath)) {
+		if (!zkClient.exists(rollingRootPath)) {
 			zkClient.createPersistent(rollingRootPath);
+		}
+		if (!zkClient.exists(rollingConfigPath)) {
 			zkClient.createPersistent(rollingConfigPath, contents.toString());
 		} else {
 			zkClient.writeData(rollingConfigPath, contents.toString());
