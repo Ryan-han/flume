@@ -1,4 +1,4 @@
-package com.nexr.rolling.workflow;
+package com.nexr.rolling.workflow.job;
 
 import java.io.IOException;
 
@@ -10,6 +10,8 @@ import com.nexr.rolling.workflow.DFSTasklet;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
+ * INPUT 과 OUTPUT 디렉토리를 체크한다. INPUT 이 없을 경우는 생성을 OUTPUT 이 있을 경우 제거한다.
+ * 
  * @author dani.kim@nexr.com
  */
 public class InitTasklet extends DFSTasklet {

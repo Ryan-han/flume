@@ -15,18 +15,11 @@
 	<bean id="launcher" class="com.nexr.framework.workflow.JobLauncherImpl" p:executionDao-ref="jobExecutionDao" />
 	<bean id="jobExecutionDao" class="com.nexr.rolling.workflow.ZKJobExecutionDao" />
 
-	<bean id="jobExecutionListener" class="com.nexr.rolling.workflow.JobExecutionListenerImpl" />
-	<bean id="stepExecutionListener" class="com.nexr.rolling.workflow.StepExecutionListenerImpl" />
+	<bean id="jobExecutionListener" class="com.nexr.rolling.workflow.JobExecutionListenerImpl" p:executionDao-ref="jobExecutionDao" />
+	<bean id="stepExecutionListener" class="com.nexr.rolling.workflow.StepExecutionListenerImpl" p:executionDao-ref="jobExecutionDao" />
 	
-	<bean id="rollingJob" class="com.nexr.rolling.workflow.RollingJob" 
-		p:jobExecutionListener-ref="jobExecutionListener"
-		p:stepExecutionListener-ref="stepExecutionListener" />
-
-	<bean id="hourlyRollingJob" class="com.nexr.rolling.workflow.HourlyRollingJob" 
-		p:jobExecutionListener-ref="jobExecutionListener"
-		p:stepExecutionListener-ref="stepExecutionListener" />
-	
-	<bean id="dailyRollingJob" class="com.nexr.rolling.workflow.DailyRollingJob" 
+	<bean id="rollingJob" class="com.nexr.rolling.workflow.job.RollingJob" scope="prototype"
+		p:executionDao-ref="jobExecutionDao"
 		p:jobExecutionListener-ref="jobExecutionListener"
 		p:stepExecutionListener-ref="stepExecutionListener" />
 </beans>

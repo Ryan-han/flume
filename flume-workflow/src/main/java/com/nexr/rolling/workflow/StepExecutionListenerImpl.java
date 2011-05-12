@@ -32,4 +32,8 @@ public class StepExecutionListenerImpl implements StepExecutionListener {
 	@Override
 	public void caught(Step step, StepContext context, Throwable cause) {
 	}
+	
+	public void setExecutionDao(JobExecutionDao executionDao) {
+		this.executionDao = executionDao;
+	}
 }

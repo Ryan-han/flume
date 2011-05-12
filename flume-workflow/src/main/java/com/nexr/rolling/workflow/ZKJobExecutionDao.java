@@ -28,7 +28,6 @@ import org.springframework.batch.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.batch.retry.listener.RetryListenerSupport;
 import org.springframework.batch.retry.policy.SimpleRetryPolicy;
 import org.springframework.batch.retry.support.RetryTemplate;
-import org.springframework.stereotype.Repository;
 
 import com.nexr.framework.workflow.Job;
 import com.nexr.framework.workflow.JobExecution;
@@ -45,7 +44,6 @@ import com.nexr.framework.workflow.Workflow;
 /**
  * @author dani.kim@nexr.com
  */
-@Repository
 public class ZKJobExecutionDao implements JobExecutionDao {
 	private static final String COMPLETE = "/rolling/jobs/complete";
 	private static final String RUNNING = "/rolling/jobs/running";
@@ -120,10 +118,8 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		}
 		ObjectNode node = root.putObject("workflow");
 		Workflow workflow = execution.getWorkflow();
-		ArrayNode steps = node.putArray("steps");
-		for (Step step : workflow.getSteps()) {
-			steps.add(step.getName());
-		}
+		node.put("steps", writeSteps(workflow.getSteps()));
+		node.put("footprints", writeSteps(workflow.getFootprints()));
 		return root.toString();
 	}
 
@@ -149,16 +145,9 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			return retryTemplate.execute(new RetryCallback<StepExecution>() {
 				@Override
 				public StepExecution doWithRetry(RetryContext context) throws Exception {
-					String parent = createZNodePath(execution);
-					ObjectNode node = new ObjectNode(new ObjectMapper().getNodeFactory());
-					node.put("timestamp", System.currentTimeMillis());
-					node.put("name", step.getName());
-					if (step.getTasklet() != null) {
-						node.put("tasklet", step.getTasklet().getName());
-					}
-					String json = node.toString();
-					LOG.debug("Update step execution ", new Object[] { execution.getKey(), step.getName(), json });
-					client.createPersistentSequential(String.format("%s/step-", parent), json);
+//					String parent = createZNodePath(execution);
+//					client.createPersistentSequential(String.format("%s/step-", parent), writeStep(step));
+					updateJobExecution(execution);
 					StepExecution stepExecution = new StepExecution();
 					return stepExecution;
 				}
@@ -222,7 +211,8 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			execution.setKey(root.path("key").getTextValue());
 			execution.setJob(job);
 			execution.setStatus(JobStatus.valueOf(root.path("status").getTextValue()));
-			execution.setWorkflow(new Workflow(readSteps(root.path("workflow").path("steps")), readFootprints(execution.getKey())));
+//			execution.setWorkflow(new Workflow(readSteps(root.path("workflow").path("steps")), readFootprints(execution.getKey())));
+			execution.setWorkflow(new Workflow(readSteps(root.path("workflow").path("steps")), readSteps(root.path("workflow").path("footprints"))));
 			StepContext context = new StepContext();
 			context.setConfig(new Config(parameters));
 			execution.setContext(context);
@@ -233,6 +223,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		return null;
 	}
 	
+	@SuppressWarnings("unused")
 	private Steps readFootprints(String key) throws IOException {
 		Steps steps = new Steps();
 		String path = String.format("%s/%s", RUNNING, key);
@@ -278,6 +269,24 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			return new Step(node.getTextValue(), null);
 		}
 		throw new IllegalStateException("Unsupported json format. \"" + node.toString() + "\"");
+	}
+	
+	private JsonNode writeSteps(Steps steps) {
+		ArrayNode nodes = new ArrayNode(new ObjectMapper().getNodeFactory());
+		for (Step step : steps) {
+			nodes.add(writeStep(step));
+		}
+		return nodes;
+	}
+	
+	private JsonNode writeStep(Step step) {
+		ObjectNode node = new ObjectNode(new ObjectMapper().getNodeFactory());
+		node.put("timestamp", System.currentTimeMillis());
+		node.put("name", step.getName());
+		if (step.getTasklet() != null) {
+			node.put("tasklet", step.getTasklet().getName());
+		}
+		return node;
 	}
 
 	public void removeJob(Job job) {

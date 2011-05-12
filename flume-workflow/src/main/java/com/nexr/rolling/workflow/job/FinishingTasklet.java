@@ -1,4 +1,4 @@
-package com.nexr.rolling.workflow;
+package com.nexr.rolling.workflow.job;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,6 +14,7 @@ import com.nexr.rolling.workflow.DFSTasklet;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
+ * Map/Reduce 결과를 이동시킨다.
  * @author dani.kim@nexr.com
  */
 public class FinishingTasklet extends DFSTasklet {
@@ -32,9 +33,9 @@ public class FinishingTasklet extends DFSTasklet {
 		String result = context.getConfig().get(RollingConstants.RESULT_PATH, null);
 
 		Path sourcePath = new Path(output);
-		FileStatus[] dataType = null;
-		FileStatus[] days = null;
-		FileStatus[] files = null;
+		FileStatus[] types = null;
+		FileStatus[] timegroups = null;
+		FileStatus[] partials = null;
 		try {
 			if (!fs.exists(new Path(result))) {
 				fs.mkdirs(new Path(result));
@@ -43,36 +44,20 @@ public class FinishingTasklet extends DFSTasklet {
 			throw new RuntimeException(e);
 		}
 		try {
-			dataType = fs.listStatus(sourcePath);
-			boolean rename;
-			String dirName;
-			for (FileStatus type : dataType) {
-				days = fs.listStatus(new Path(sourcePath, type.getPath()
-						.getName()));
-				for (FileStatus day : days) {
-					files = fs.listStatus(new Path(sourcePath, type.getPath().getName() + File.separator + day.getPath().getName()), SEQ_FILE_FILTER);
-					for (FileStatus file : files) {
-						LOG.info("Find File " + file.getPath());
-						dirName = day.getPath().getName();
-						Path dest = new Path(result + File.separator
-								+ type.getPath().getName() + File.separator
-								+ day.getPath().getName());
+			types = fs.listStatus(sourcePath);
+			for (FileStatus type : types) {
+				timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
+				for (FileStatus group : timegroups) {
+					partials = fs.listStatus(new Path(type.getPath(), group.getPath().getName()), SEQ_FILE_FILTER);
+					for (FileStatus file : partials) {
+						LOG.info("Find File {}", file.getPath());
+						String dirName = group.getPath().getName();
+						Path dest = new Path(result, type.getPath().getName() + File.separator + group.getPath().getName());
 						if (!fs.exists(dest)) {
 							fs.mkdirs(dest);
-							rename = fs.rename(file.getPath(),
-									new Path(dest + File.separator
-											+ file.getPath().getName()));
-						} else {
-							rename = fs.rename(file.getPath(),
-									new Path(dest + File.separator
-											+ file.getPath().getName()));
 						}
-						LOG.info("Moving "
-								+ file.getPath()
-								+ " to "
-								+ new Path(dest + File.separator
-										+ file.getPath().getName()).toString()
-								+ " " + rename);
+						boolean rename = fs.rename(file.getPath(), new Path(dest, file.getPath().getName()));
+						LOG.info("Moving {} to {}. status is {}", new Object[] { file.getPath(), new Path(dest, file.getPath().getName()).toString(), rename });
 					}
 				}
 			}
