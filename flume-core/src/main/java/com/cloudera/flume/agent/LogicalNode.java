@@ -188,7 +188,18 @@ public class LogicalNode implements Reportable {
     driver.start();
     reconfigures.incrementAndGet();
   }
-
+  
+  /**
+   * lastGoodCfg 설정으로 다시 Source와 Sink를 만들고 Driver를 다시 실행한다.
+   * @throws IOException
+   * @throws RuntimeException
+   * @throws FlumeSpecException
+ * @throws InterruptedException 
+   */
+  public void restartNode() throws IOException, RuntimeException, FlumeSpecException, InterruptedException {
+	  startNodeDriver(this.src, this.snk, 10000);
+  }
+  	
   public void loadConfig(FlumeConfigData cfg) throws IOException,
       RuntimeException, FlumeSpecException {
 

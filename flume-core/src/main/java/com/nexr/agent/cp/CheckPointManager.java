@@ -34,13 +34,7 @@ public interface CheckPointManager {
 	
 	public void stopServer();
 	
-	@Deprecated
-	public void addCollectorPendingList(String tagId);
-	
 	public void addCollectorCompleteList(List<String> tagIds);
-	
-	@Deprecated
-	public void moveToCompleteList();
 
 	public boolean getTagList(String tagId);
 }

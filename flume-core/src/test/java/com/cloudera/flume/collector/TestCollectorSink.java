@@ -285,14 +285,6 @@ public class TestCollectorSink {
 	}
 
 	@Override
-	public void addCollectorPendingList(String tagId) {
-	}
-
-	@Override
-	public void moveToCompleteList() {
-	}
-
-	@Override
 	public void addPendingQ(String tagId, String logicalNodeName,
 			Map<String, Long> tagContent) {
 		pending.put(tagId, tagContent);

@@ -97,7 +97,8 @@ public class CheckpointRegister<S extends EventSink> extends EventSinkDecorator<
 					
 					@Override
 					public void end(String group) throws IOException {
-						manager.addCollectorPendingList(group);
+//						manager.addCollectorPendingList(group);
+						//TODO builder로 생성하지 않는다. 
 					}
 				});  
 			}

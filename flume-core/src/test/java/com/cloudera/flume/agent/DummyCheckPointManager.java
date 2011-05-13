@@ -31,14 +31,6 @@ public class DummyCheckPointManager implements CheckPointManager {
 	public void startServer() {
 	}
 
-	@Override
-	public void addCollectorPendingList(String tagId) {
-	}
-
-	@Override
-	public void moveToCompleteList() {
-	}
-
 	public void setCheckPointMap(Map<String, Long> checkPointMap) {
 		this.checkPointMap = checkPointMap;
 	}

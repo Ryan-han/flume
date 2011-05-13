@@ -12,13 +12,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-
-import javax.print.DocFlavor.STRING;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -35,7 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.flume.agent.FlumeNode;
+import com.cloudera.flume.agent.LogicalNode;
 import com.cloudera.flume.conf.FlumeConfiguration;
+import com.cloudera.flume.conf.FlumeSpecException;
 import com.cloudera.util.Clock;
 import com.nexr.collector.cp.CheckPointHandler;
 import com.nexr.cp.thrift.CheckPointService;
@@ -87,17 +86,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 	private boolean clientStarted = false;
 
 	public CheckPointManagerImpl() {
-		// agentList = new ArrayList<String>();
-		// agentTagMap = new HashMap<String, List<PendingQueueModel>>();
-		// waitedTagList = new HashMap<String, WaitingQueueModel>();
-		// checkPointFilePath = FlumeConfiguration.get().getCheckPointFile();
-		// checkTagIdThread = new CheckTagIDThread();
-		// pendingList = new ArrayList<String>();
-		// completeList = new ArrayList<String>();
-		// agentTransportMap = new HashMap<String, TTransport>();
-		// agentClientMap = new HashMap<String, CheckPointService.Client>();
-		// agentCollectorInfo = new HashMap<String, CollectorInfo>();
-
 		agentList = Collections.synchronizedList(new ArrayList<String>());
 		agentTagMap = Collections
 				.synchronizedMap(new HashMap<String, List<PendingQueueModel>>());
@@ -140,10 +128,8 @@ public class CheckPointManagerImpl implements CheckPointManager {
 					} else {
 						for (int i = 0; i < agentList.size(); i++) {
 							if (!agentClientMap.containsKey(agentList.get(i))) {
-								CollectorInfo ci = agentCollectorInfo
-										.get(agentList.get(i));
-								socket = new TSocket(ci.getCollectorHost(),
-										ci.getCollectorPort());
+								CollectorInfo ci = agentCollectorInfo.get(agentList.get(i));
+								socket = new TSocket(ci.getCollectorHost(), ci.getCollectorPort());
 								socket.setTimeout(timeout);
 								transport = new TFramedTransport(socket);
 								protocol = new TBinaryProtocol(transport);
@@ -155,14 +141,10 @@ public class CheckPointManagerImpl implements CheckPointManager {
 								try {
 									transport.open();
 
-									agentTransportMap.put(agentList.get(i),
-											transport);
-									agentClientMap
-											.put(agentList.get(i), client);
+									agentTransportMap.put(agentList.get(i), transport);
+									agentClientMap.put(agentList.get(i), client);
 								} catch (TTransportException e) {
-									// TODO Auto-generated catch block
-									log.info(agentList.get(i)
-											+ " Connect refuse ");
+									log.info(agentList.get(i)+ " Connect refuse ");
 								}
 							}
 						}
@@ -175,7 +157,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 				}
 			}
 			log.info("ClientThread End; ");
-
 			stopped.countDown();
 		}
 	};
@@ -281,9 +262,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 
 	@Override
 	public Map<String, Long> getOffset(String logicalNodeName) {
-		// TODO Auto-generated method stub
-		// checkpoint ÌååÏùºÏóêÏÑú Ìï¥Îãπ logical NodeÏóê Ìï¥ÎãπÌïòÎäî ÌååÏùºÍ≥º
-		// offsetÏùÑ Ï†ÑÎã¨.
 		Map<String, Long> result = new HashMap<String, Long>();
 
 		FileReader fileReader;
@@ -339,8 +317,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 	@Override
 	public void startTagChecker(String agentName, String collectorHost,
 			int collectorPort) {
-		// startClientÎ•º Ìò∏Ï∂ú ÌïòÏßÄ ÏïäÍ≥† Ïù¥ Î©îÏÜåÎìúÎ•º Ìò∏Ï∂ú ÌïòÏó¨
-		// Ïì∞Î†àÎìú ÎÇ¥ÏóêÏÑú startÎ•º Ìò∏Ï∂ú ÌïòÎèÑÎ°ù Ìï®.
 		log.info("StartTagChecker [" + agentName + ", " + collectorHost + ", " + collectorPort + "]");
 		startClient();
 		synchronized (sync) {
@@ -372,11 +348,13 @@ public class CheckPointManagerImpl implements CheckPointManager {
 		}
 	}
 
+	/**
+	 * Agent에서 Collector로 보낸 Tag들을 Q에 등록한다.
+	 */
 	@Override
-	public void addPendingQ(String tagId, String agentName,
-			Map<String, Long> tagContent) {
-		
+	public void addPendingQ(String tagId, String agentName, Map<String, Long> tagContent) {
 		log.info("addpendingq : " + tagContent.size());
+		
 		for(String key : tagContent.keySet()) {
 			log.info(key + " : " + tagContent.values());
 		}
@@ -388,7 +366,7 @@ public class CheckPointManagerImpl implements CheckPointManager {
 				tags = agentTagMap.get(agentName);
 				pqm = new PendingQueueModel(tagId, tagContent);
 				tags.add(pqm);
-				agentTagMap.put(agentName, tags);
+				agentTagMap.put(agentName, tags); //TODO 필요없는 코드 인 것 같다. 
 			} else {
 				tags = new ArrayList<PendingQueueModel>();
 				pqm = new PendingQueueModel(tagId, tagContent);
@@ -397,13 +375,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 			}
 			Log.info("add " + agentName + " : " + tagId + " into PendingQ");
 		}
-	}
-
-	@Deprecated
-	@Override
-	public void addCollectorPendingList(String tagId) {
-		// TODO Auto-generated method stub
-		pendingList.add(tagId);
 	}
 
 	@Override
@@ -419,21 +390,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 	}
 
 	@Override
-	// CollectorÏóêÏÑú Î∞îÎ°ú CompleteListÎ°ú TagIdÎ•º ÎÑ£ÏúºÎ©¥ ÌïÑÏöî ÏóÜÏùå.
-	public void moveToCompleteList() {
-		// TODO Auto-generated method stub
-		Iterator<String> it = pendingList.iterator();
-		synchronized (sync) {
-			while (it.hasNext()) {
-				completeList.add(it.next());
-				it.remove();
-			}
-		}
-	}
-
-	@Override
-	// Collecter tagIdÍ∞Ä ÏûàÎäîÏßÄ ÌôïÏù∏ÌïòÍ≥† ÏûàÏúºÎ©¥ TrueÎ•º Ï†ÑÎã¨ÌïòÍ≥†
-	// completeListÏóêÏÑú ÏÇ≠Ï†úÌï®.
 	public boolean getTagList(String tagId) {
 		// TODO Auto-generated method stub
 		boolean res = false;
@@ -450,30 +406,30 @@ public class CheckPointManagerImpl implements CheckPointManager {
 		return res;
 	}
 
+	/**
+	 * Agent의 pendingQ에 등록한 tag 들을 Collector에 완료가 되었는지 물어보고 
+	 * 완료되었으면 목록에서 삭제를 하고 Checkpoint 파일을 갱신한다.
+	 */
 	public synchronized void checkCollectorTagID() {
-		// TODO Auto-generated method stub
 		// pendingQueue에 있는 agent의 tagId를 모두 체크 해보고
 		// 마지막 true리턴 받은 값을 기억했다가 checkpoint파일에 update한다.
 		boolean res = true;
 
 		try {
 			for (int i = 0; i < agentList.size(); i++) {
-				List<PendingQueueModel> tags = agentTagMap
-						.get(agentList.get(i));
+				List<PendingQueueModel> tags = agentTagMap.get(agentList.get(i));
 
 				if (tags != null && agentClientMap.size() > 0) {
-					List<PendingQueueModel> tmp = Collections
-							.synchronizedList(new ArrayList<PendingQueueModel>());
+					List<PendingQueueModel> tmp = Collections.synchronizedList(new ArrayList<PendingQueueModel>());
 					PendingQueueModel currentTagId = null;
 					for (int t = 0; t < tags.size(); t++) {
 						if (agentClientMap.get(agentList.get(i)) != null) {
-							res = agentClientMap.get(agentList.get(i))
-									.checkTagId(tags.get(t).getTagId());
+							res = agentClientMap.get(agentList.get(i)).checkTagId(tags.get(t).getTagId()); // Thrift 호출
+							//TODO Tag하나씩 호출 하는 것 보다 한번에 호출 하는 것이 네트웍 IO가 덜 발생 할 것 같다.
 							if (res) {
 								// 현재 TagId 저장 후 리스트에서 삭제.
 								currentTagId = tags.get(t);
-								log.info("Current TagID "
-										+ currentTagId.getTagId());
+								log.info("Current TagID "+ currentTagId.getTagId());
 								tmp.add(tags.get(t));
 
 							} else {
@@ -483,21 +439,20 @@ public class CheckPointManagerImpl implements CheckPointManager {
 							}
 						}
 					}
+					//TODO 체크포인트 파일을 합쳐서 적어야 IO 가 덜 발생할 것 같다.
 					if (currentTagId != null) {
 						updateCheckPointFile(agentList.get(i), currentTagId);
 						for (int t = 0; t < tmp.size(); t++) {
 							if (agentTagMap.get(agentList.get(i)) != null) {
 								agentList.get(i);
 								tmp.get(t);
-								agentTagMap.get(agentList.get(i)).remove(
-										tmp.get(t));
+								agentTagMap.get(agentList.get(i)).remove(tmp.get(t));
 							}
 						}
 					}
 				}
 			}
 		} catch (TException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -643,7 +598,19 @@ public class CheckPointManagerImpl implements CheckPointManager {
 
 	}
 
-	public static void main(String[] args) throws InterruptedException {
+	public void recover(String logicalNodeName) throws IOException, InterruptedException, RuntimeException,
+		FlumeSpecException {
+		LogicalNode logicalNode = FlumeNode.getInstance().getLogicalNodeManager().get(logicalNodeName);
+		if (logicalNode == null) {
+			log.error("Failed recover [" + logicalNodeName + "] is not registed in CheckpointManager");
+			return;
+		}
+		log.info("Closing logicalNode[" + logicalNodeName + "]");
+		logicalNode.close();
+		log.info("Closed logicalNode[" + logicalNodeName + "]");
+		
+		log.info("Restarting LogicalNode [" + logicalNodeName + "]");
+		logicalNode.restartNode();
+		log.info("Finished LogicalNode [" + logicalNodeName + "]");
 	}
-
 }

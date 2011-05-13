@@ -49,7 +49,7 @@ public class AgentFailChainSink extends EventSink.Base {
   final EventSink snk;
 
   public enum RELIABILITY {
-    E2E, DFO, BE
+    E2E, DFO, BE, CP
   };
 
   public AgentFailChainSink(Context context, RELIABILITY rel, String... hosts)
@@ -81,6 +81,12 @@ public class AgentFailChainSink extends EventSink.Base {
       LOG.info("Setting failover chain to  " + chains);
       snk = new CompositeSink(context, chains);
       break;
+    }
+    case CP: {
+    	String chains = AgentFailChainSink.genCPChain(thriftlist.toArray(new String[0]));
+    	LOG.info("Setting failover chain to " + chains);
+    	snk = new CompositeSink(context, chains);
+    	break;
     }
     default: {
       throw new FlumeSpecException("Unknown reliability " + rel);
@@ -150,6 +156,11 @@ public class AgentFailChainSink extends EventSink.Base {
     LOG.info("Setting e2e failover chain to  " + spec);
     return spec;
   }
+  
+  public static String genCPChain(String...chain) {
+	  String spec = "{ }";
+	  return spec;
+  }
 
   /**
    * Generates a dfo chain. Tries best effort and then writes to dfo log if
@@ -213,6 +224,22 @@ public class AgentFailChainSink extends EventSink.Base {
         }
       }
     };
+  }
+  
+  public static SinkBuilder cpBuilder() {
+	  return new SinkBuilder() {
+
+		@Override
+		public EventSink build(Context context, String... argv) {
+			Preconditions.checkArgument(argv.length >= 1, 
+					"usage: agentCPChain(\"machine1[:port]\" [, \"machine2[:port]\" [,...]])");
+			try {
+				return new AgentFailChainSink(context, RELIABILITY.CP, argv);
+			} catch (FlumeSpecException e) {
+				throw new IllegalArgumentException(e);
+			}
+		}
+	  };
   }
 
   /**

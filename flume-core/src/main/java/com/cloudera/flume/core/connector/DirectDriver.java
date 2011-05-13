@@ -165,7 +165,7 @@ public class DirectDriver extends Driver {
         lastExn = ex;
         stopped = true;
         LOG.error("Exiting driver " + nodeName + " in error state "
-            + DirectDriver.this + " because " + ex.getMessage());
+            + DirectDriver.this + " because " + ex.getMessage(), ex);
         state = DriverState.ERROR;
         stateSignal.notifyAll();
       }
