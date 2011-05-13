@@ -10,14 +10,14 @@ import org.slf4j.LoggerFactory;
 
 import com.nexr.data.sdp.rolling.mr.HourlyRollingMr;
 import com.nexr.framework.workflow.StepContext;
-import com.nexr.rolling.workflow.DFSTasklet;
+import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
  * @author dani.kim@nexr.com
  */
 @Deprecated
-public class RunHourlyTasklet extends DFSTasklet {
+public class RunHourlyTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	@Override

@@ -1,4 +1,4 @@
-package com.nexr.rolling.workflow.hourly;
+package com.nexr.rolling.workflow.daily;
 
 import java.io.IOException;
 
@@ -21,8 +21,8 @@ public class InitTasklet extends RetryableDFSTaskletSupport {
 	}
 	
 	public String run(com.nexr.framework.workflow.StepContext context) {
-		Path input = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_INPUT_PATH, null));
-		Path output = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_OUTPUT_PATH, null));
+		Path input = new Path(context.getConfig().get(RollingConstants.DAILY_MR_INPUT_PATH, null));
+		Path output = new Path(context.getConfig().get(RollingConstants.DAILY_MR_OUTPUT_PATH, null));
 		try {
 			if (!fs.exists(input)) {
 				fs.mkdirs(input);

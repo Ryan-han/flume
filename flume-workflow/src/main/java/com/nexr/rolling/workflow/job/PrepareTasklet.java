@@ -10,7 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.nexr.framework.workflow.StepContext;
-import com.nexr.rolling.workflow.DFSTasklet;
+import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
@@ -19,7 +19,7 @@ import com.nexr.rolling.workflow.RollingConstants;
  * 
  * @author dani.kim@nexr.com
  */
-public class PrepareTasklet extends DFSTasklet {
+public class PrepareTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 
 	final public static PathFilter DATA_FILTER = new PathFilter() {
