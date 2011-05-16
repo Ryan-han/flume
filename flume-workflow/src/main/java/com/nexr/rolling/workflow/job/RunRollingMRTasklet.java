@@ -10,17 +10,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.nexr.framework.workflow.StepContext;
-import com.nexr.rolling.workflow.DFSTasklet;
+import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
  * @author dani.kim@nexr.com
  */
-public class RunRollingMRTasklet extends DFSTasklet {
+public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	@Override
-	public String run(StepContext context) {
+	public String doRun(StepContext context) {
 		List<String> params = new ArrayList<String>();
 		params.add(context.getConfig().get(RollingConstants.INPUT_PATH, null) + File.separator + "*" + File.separator + "*" + File.separator + "*");
 		params.add(context.getConfig().get(RollingConstants.OUTPUT_PATH, null));

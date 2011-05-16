@@ -75,8 +75,20 @@ public class Steps implements Iterable<Step> {
 		return this;
 	}
 	
+	public Step pop() {
+		return steps.remove(steps.size() - 1);
+	}
+	
 	@Override
 	public Iterator<Step> iterator() {
 		return steps.iterator();
+	}
+	
+	public Step get(String name) {
+		return stepMap.get(name);
+	}
+
+	public Step first() {
+		return steps.get(0);
 	}
 }

@@ -8,6 +8,7 @@ import com.nexr.framework.workflow.listener.JobExecutionListener;
  * @author dani.kim@nexr.com
  */
 public class JobExecutionListenerImpl implements JobExecutionListener {
+	@SuppressWarnings("unused")
 	private JobExecutionDao executionDao;
 	
 	@Override

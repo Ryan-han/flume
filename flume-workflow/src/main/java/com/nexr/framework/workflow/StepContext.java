@@ -1,6 +1,7 @@
 package com.nexr.framework.workflow;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -9,6 +10,11 @@ import java.util.Map;
 public class StepContext {
 	private JobExecution jobExecution;
 	private Config config;
+	private Map<String, String> context;
+	
+	public StepContext() {
+		context = new HashMap<String, String>();
+	}
 	
 	public JobExecution getJobExecution() {
 		return jobExecution;
@@ -16,6 +22,26 @@ public class StepContext {
 	
 	public void setJobExecution(JobExecution jobExecution) {
 		this.jobExecution = jobExecution;
+	}
+	
+	public Collection<String> keys() {
+		return context.keySet();
+	}
+	
+	public String get(String name, String defaultValue) {
+		return context.get(name) == null ? defaultValue : context.get(name);
+	}
+	
+	public int getInt(String name, int defaultValue) {
+		try {
+			return Integer.parseInt(get(name, null));
+		} catch (Exception e) {
+			return defaultValue;
+		}
+	}
+	
+	public void set(String name, String value) {
+		context.put(name, value);
 	}
 	
 	public Config getConfig() {

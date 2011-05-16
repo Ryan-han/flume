@@ -8,13 +8,19 @@ import java.util.Map;
 public interface Job {
 	String getName();
 	
+	void setName(String name);
+	
 	boolean isRecoverable();
 	
+	void setRecoverable(boolean recoverable);
+	
 	Steps getSteps();
+	
+	void setSteps(Steps steps);
 	
 	Map<String, String> getParameters();
 	
 	void execute(JobExecution execution) throws JobExecutionException;
 
-	void addParameter(String string, String string2);
+	void addParameter(String name, String value);
 }

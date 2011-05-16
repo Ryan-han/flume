@@ -38,6 +38,7 @@ public abstract class AbstractJob implements Job {
 		this.name = name;
 		this.recoverable = recoverable;
 		this.parameters = new HashMap<String, String>();
+		parameters.put("job.class", getClass().getName());
 	}
 
 	@Override
@@ -63,16 +64,18 @@ public abstract class AbstractJob implements Job {
 		} catch (Exception e) {
 			LOG.warn("exception encountered in afterJob callback", e);
 		}
-		execution.setStatus(JobStatus.COMPLETED);
 		executionDao.updateJobExecution(execution);
+		executionDao.completeJob(execution);
 	}
 	
 	protected abstract void doExecute(JobExecution execution) throws JobExecutionException;
 
+	@Override
 	public void addParameter(String name, String value) {
 		parameters.put(name, value);
 	}
 
+	@Override
 	public Map<String, String> getParameters() {
 		return Collections.unmodifiableMap(parameters);
 	}
@@ -86,6 +89,7 @@ public abstract class AbstractJob implements Job {
 		return recoverable;
 	}
 
+	@Override
 	public void setRecoverable(boolean recoverable) {
 		this.recoverable = recoverable;
 	}
@@ -95,10 +99,12 @@ public abstract class AbstractJob implements Job {
 		return name;
 	}
 
+	@Override
 	public void setName(String name) {
 		this.name = name;
 	}
 
+	@Override
 	public Steps getSteps() {
 		return steps;
 	}
@@ -107,6 +113,7 @@ public abstract class AbstractJob implements Job {
 		this.steps = new Steps(steps);
 	}
 
+	@Override
 	public void setSteps(Steps steps) {
 		if (steps != null) {
 			this.steps = new Steps(steps);

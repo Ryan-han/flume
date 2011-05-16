@@ -7,6 +7,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.batch.retry.RetryCallback;
 import org.springframework.batch.retry.RetryContext;
 import org.springframework.batch.retry.backoff.ExponentialBackOffPolicy;
@@ -14,6 +16,8 @@ import org.springframework.batch.retry.policy.SimpleRetryPolicy;
 import org.springframework.batch.retry.support.RetryTemplate;
 
 public class TestSpringBatch {
+	private Logger LOG = LoggerFactory.getLogger(getClass());
+	
 	@Test
 	public void testRetry() throws Exception {
 		RetryTemplate template = new RetryTemplate();
@@ -29,7 +33,7 @@ public class TestSpringBatch {
 		template.execute(new RetryCallback<String>() {
 			@Override
 			public String doWithRetry(RetryContext context) throws Exception {
-				System.out.println(new Date() + "\t" + "zz");
+				LOG.info("time: {}, retryCount: {}", new Date(), context.getRetryCount());
 				counter.countDown();
 				if (counter.getCount() == 0) {
 					return "Hello World";

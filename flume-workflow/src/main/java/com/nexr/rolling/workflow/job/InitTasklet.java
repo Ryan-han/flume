@@ -6,7 +6,8 @@ import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.nexr.rolling.workflow.DFSTasklet;
+import com.nexr.framework.workflow.StepContext;
+import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
@@ -14,14 +15,10 @@ import com.nexr.rolling.workflow.RollingConstants;
  * 
  * @author dani.kim@nexr.com
  */
-public class InitTasklet extends DFSTasklet {
+public class InitTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
-	public InitTasklet() {
-		super();
-	}
-	
-	public String run(com.nexr.framework.workflow.StepContext context) {
+	public String doRun(StepContext context) {
 		Path input = new Path(context.getConfig().get(RollingConstants.INPUT_PATH, null));
 		Path output = new Path(context.getConfig().get(RollingConstants.OUTPUT_PATH, null));
 		try {

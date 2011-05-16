@@ -14,7 +14,7 @@ import com.nexr.framework.workflow.listener.JobLauncherListener;
 public class JobLauncherImpl implements JobLauncher {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
-	JobExecutionDao executionDao;
+	JobExecutionDao executionDao = new InMemoryJobExecutionDao();
 	JobLauncherListener listener;
 	
 	@Override
@@ -32,8 +32,14 @@ public class JobLauncherImpl implements JobLauncher {
 			}
 			LOG.info("Recovery job {}", job);
 			execution.setRecoveryMode(true);
+			execution.setStatus(JobStatus.STARTED);
+			executionDao.updateJobExecution(execution);
 		}
+
 		try {
+			if (job instanceof AbstractJob) {
+				((AbstractJob) job).setExecutionDao(executionDao);
+			}
 			job.execute(execution);
 		} catch (Exception e) {
 			LOG.info("Exception encountered in job", e);

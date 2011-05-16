@@ -22,4 +22,9 @@
 		p:executionDao-ref="jobExecutionDao"
 		p:jobExecutionListener-ref="jobExecutionListener"
 		p:stepExecutionListener-ref="stepExecutionListener" />
+		
+	<bean id="dedupJob" class="com.nexr.dedup.job.DedupJob" scope="prototype"
+		p:executionDao-ref="jobExecutionDao"
+		p:jobExecutionListener-ref="jobExecutionListener"
+		p:stepExecutionListener-ref="stepExecutionListener" />
 </beans>

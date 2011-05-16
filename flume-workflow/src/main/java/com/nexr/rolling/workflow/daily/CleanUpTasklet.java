@@ -1,4 +1,4 @@
-package com.nexr.rolling.workflow.hourly;
+package com.nexr.rolling.workflow.daily;
 
 import java.io.IOException;
 
@@ -20,8 +20,8 @@ public class CleanUpTasklet extends RetryableDFSTaskletSupport {
 	
 	@Override
 	public String run(StepContext context) {
-		String input = context.getConfig().get(RollingConstants.HOURLY_MR_INPUT_PATH, null);
-		String output = context.getConfig().get(RollingConstants.HOURLY_MR_OUTPUT_PATH, null);
+		String input = context.getConfig().get(RollingConstants.DAILY_MR_INPUT_PATH, null);
+		String output = context.getConfig().get(RollingConstants.DAILY_MR_OUTPUT_PATH, null);
 		LOG.info("Cleanup : Input: {}, Output: {}", new Object[] { input, output });
 		try {
 			fs = FileSystem.get(conf);
