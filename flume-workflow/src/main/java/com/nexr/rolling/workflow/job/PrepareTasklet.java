@@ -19,6 +19,7 @@ import com.nexr.rolling.workflow.RollingConstants;
  * @author dani.kim@nexr.com
  */
 public class PrepareTasklet extends RetryableDFSTaskletSupport {
+	@SuppressWarnings("unused")
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 
 	final public static PathFilter DATA_FILTER = new PathFilter() {
@@ -29,38 +30,25 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 	
 	@Override
 	public String doRun(StepContext context) {
-		Path sourcePath = new Path(context.getConfig().get(RollingConstants.RAW_PATH, null));
-		FileStatus[] types = null;
-		FileStatus[] timegroups = null;
+		Path sourcePath = new Path(context.get(RollingConstants.RAW_PATH, null));
 		try {
-			types = fs.listStatus(sourcePath);
-			int count = 0;
+			FileStatus[] types = fs.listStatus(sourcePath);
 			for (FileStatus type : types) {
-				String input = context.getConfig().get(RollingConstants.INPUT_PATH, null);
+				String input = context.get(RollingConstants.INPUT_PATH, null);
 				if (!fs.exists(new Path(input, type.getPath().getName()))) {
 					fs.mkdirs(new Path(input, type.getPath().getName()));
 				}
-				timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
+				FileStatus[] timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
 				String isCollectorSource = context.getConfig().get(RollingConstants.IS_COLLECTOR_SOURCE, "false");
 				if ("true".equals(isCollectorSource)) {
 					for (FileStatus file : timegroups) {
-						rename(file.getPath(), String.format("%s/%s/%s", input, type.getPath().getName(), System.currentTimeMillis()));
+						rename(file.getPath(), String.format("%s/%s/%s/%s", input, type.getPath().getName(), System.currentTimeMillis()));
 					}
 				} else {
 					for (FileStatus file : timegroups) {
-						rename(file.getPath(), String.format("%s/%s", input, type.getPath().getName()));
+						rename(file.getPath(), String.format("%s/%s/%s", input, type.getPath().getName()));
 					}
 				}
-//				if ("true".equals(isCollectorSource)) {
-//					count += copyTo(fs.listStatus(type.getPath()), input, type, null);
-//				} else {
-//					for (FileStatus group : timegroups) {
-//						count += copyTo(fs.listStatus(group.getPath()), input, type, group);
-//					}
-//				}
-			}
-			if (count == 0) {
-				throw new RuntimeException();
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -74,16 +62,4 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 		}
 		fs.rename(source, new Path(destDir));
 	}
-
-//	private int copyTo(FileStatus[] partials, String input, FileStatus type) throws IOException {
-//		int count = 0;
-//		for (FileStatus partial : partials) {
-//			LOG.info("Find file " + partial.getPath());
-//			String destinationFileName = group == null ? type.getPath().getName() : String.format("%s-%s", group.getPath().getName(), partial.getPath().getName());
-//			boolean rename = fs.rename(partial.getPath() , new Path(input + File.separator + type.getPath().getName(), destinationFileName));
-//			LOG.info("Moving " + partial.toString() + ", status is: " + rename);
-//			count++;
-//		}
-//		return count;
-//	}
 }
