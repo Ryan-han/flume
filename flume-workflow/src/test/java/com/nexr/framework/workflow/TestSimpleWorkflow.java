@@ -30,17 +30,23 @@ public class TestSimpleWorkflow extends JobTestBase {
 		final JobExecution execution = new JobExecution();
 		Workflow workflow = new Workflow(new Steps(), new Steps());
 		execution.setWorkflow(workflow);
-		when(executionDao.saveJobExecution(any(Job.class))).thenReturn(
-				execution);
+		when(executionDao.saveJobExecution(any(Job.class))).thenReturn(execution);
 		doAnswer(new Answer<JobExecution>() {
 			@Override
-			public JobExecution answer(InvocationOnMock invocation)
-					throws Throwable {
-				JobExecution execution = (JobExecution) invocation
-						.getArguments()[0];
+			public JobExecution answer(InvocationOnMock invocation) throws Throwable {
+				JobExecution execution = (JobExecution) invocation.getArguments()[0];
 				return execution;
 			}
 		}).when(executionDao).updateJobExecution(any(JobExecution.class));
+		
+		doAnswer(new Answer<JobExecution>() {
+			@Override
+			public JobExecution answer(InvocationOnMock invocation) throws Throwable {
+				JobExecution execution = (JobExecution) invocation.getArguments()[0];
+				execution.setStatus(JobStatus.COMPLETED);
+				return execution;
+			}
+		}).when(executionDao).completeJob(any(JobExecution.class));
 
 		launcher.executionDao = executionDao;
 		counter = new ThreadLocal<AtomicInteger>();

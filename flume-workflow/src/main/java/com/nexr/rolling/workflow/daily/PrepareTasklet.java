@@ -25,10 +25,6 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 			return file.getName().endsWith(".done");
 		}
 	};
-
-	public PrepareTasklet() {
-		super();
-	}
 	
 	@Override
 	public String run(StepContext context) {

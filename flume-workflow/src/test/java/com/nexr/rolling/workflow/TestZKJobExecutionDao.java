@@ -9,8 +9,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.nexr.framework.workflow.AbstractJob;
 import com.nexr.framework.workflow.Job;
 import com.nexr.framework.workflow.JobExecution;
+import com.nexr.framework.workflow.JobStatus;
+import com.nexr.framework.workflow.JobTestBase;
+import com.nexr.framework.workflow.FlowJob;
 import com.nexr.framework.workflow.Step;
 import com.nexr.framework.workflow.Steps;
 import com.nexr.framework.workflow.Workflow;
@@ -18,7 +22,7 @@ import com.nexr.framework.workflow.Workflow;
 /**
  * @author dani.kim@nexr.com
  */
-public class TestZKJobExecutionDao {
+public class TestZKJobExecutionDao extends JobTestBase {
 	private ZKJobExecutionDao dao;
 	private Map<String, String> params;
 
@@ -33,40 +37,28 @@ public class TestZKJobExecutionDao {
 	}
 	
 	@Test
+	public void testClearFailExecutions() throws Exception {
+		Steps steps = new Steps();
+		AbstractJob job = createSimpleJob("test-zked", steps, dao);
+		JobExecution execution = dao.saveJobExecution(job);
+		execution.setStatus(JobStatus.FAILED);
+		dao.updateJobExecution(execution);
+		Assert.assertThat(dao.findFailExecutions().size(), is(1));
+		dao.clearFailExecutions();
+		Assert.assertThat(dao.findFailExecutions().size(), is(0));
+	}
+	
+	@Test
 	public void test() throws Exception {
-		Job job = new Job() {
-			@Override
-			public String getName() {
-				return "test";
-			}
-
-			@Override
-			public boolean isRecoverable() {
-				return false;
-			}
-
-			@Override
-			public Steps getSteps() {
-				Steps steps = new Steps();
-				steps.add(new Step("step1", null));
-				steps.add(new Step("step2", null));
-				steps.add(new Step("step3", null));
-				return steps;
-			}
-			
-			@Override
-			public void addParameter(String name, String value) {
-			}
-
-			@Override
-			public Map<String, String> getParameters() {
-				return params;
-			}
-			
-			@Override
-			public void execute(JobExecution execution) {
-			}
-		};
+		Steps steps = new Steps();
+		steps.add(new Step("step1", null));
+		steps.add(new Step("step2", null));
+		steps.add(new Step("step3", null));
+		Job job = new FlowJob("test", steps);
+		
+		for (Map.Entry<String, String> entry : params.entrySet()) {
+			job.addParameter(entry.getKey(), entry.getValue());
+		}
 		
 		Assert.assertNull(dao.getJobExecution(job));
 		dao.saveJobExecution(job);

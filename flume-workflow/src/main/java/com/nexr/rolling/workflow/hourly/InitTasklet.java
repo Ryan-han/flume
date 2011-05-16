@@ -16,10 +16,6 @@ import com.nexr.rolling.workflow.RollingConstants;
 public class InitTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
-	public InitTasklet() {
-		super();
-	}
-	
 	public String run(com.nexr.framework.workflow.StepContext context) {
 		Path input = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_INPUT_PATH, null));
 		Path output = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_OUTPUT_PATH, null));

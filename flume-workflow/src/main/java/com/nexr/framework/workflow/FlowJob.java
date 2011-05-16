@@ -3,21 +3,18 @@ package com.nexr.framework.workflow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @author dani.kim@nexr.com
- */
-public class SimpleJob extends AbstractJob {
+public class FlowJob extends AbstractJob {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
-	public SimpleJob() {
+	public FlowJob() {
 		super();
 	}
 	
-	public SimpleJob(String name, Steps steps) {
+	public FlowJob(String name, Steps steps) {
 		super(name, steps);
 	}
 	
-	public SimpleJob(String name, Steps steps, boolean recoverable) {
+	public FlowJob(String name, Steps steps, boolean recoverable) {
 		super(name, steps, recoverable);
 	}
 	
@@ -26,15 +23,17 @@ public class SimpleJob extends AbstractJob {
 		StepContext context = new StepContext();
 		context.setJobExecution(execution);
 		context.setConfig(new StepContext.Config(getParameters()));
-
+	
 		Workflow workflow = execution.getWorkflow();
 		Steps steps = getSteps();
+		
+		Step step = null;
 		if (execution.isRecoveryMode()) {
-			workflow.getFootprints().pop();
-			steps = Steps.different(workflow.getSteps(), workflow.getFootprints());
+			step = workflow.getFootprints().pop();
+		} else {
+			step = steps.first();
 		}
-		LOG.info("Job orders : {}", steps);
-		for (Step step : steps) {
+		while (step != null) {
 			workflow.addStep(step);
 			try {
 				if (steplistener != null) {
@@ -46,7 +45,11 @@ public class SimpleJob extends AbstractJob {
 			Tasklet tasklet;
 			try {
 				tasklet = step.getTasklet().newInstance();
-				tasklet.run(context);
+				String next = tasklet.run(context);
+				if (next == null) {
+					break;
+				}
+				step = steps.get(next);
 			} catch (Exception e) {
 				throw new JobExecutionException(e);
 			}
@@ -65,3 +68,4 @@ public class SimpleJob extends AbstractJob {
 		}
 	}
 }
+

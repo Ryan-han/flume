@@ -12,9 +12,12 @@ import org.springframework.batch.retry.backoff.ExponentialBackOffPolicy;
 import org.springframework.batch.retry.policy.SimpleRetryPolicy;
 import org.springframework.batch.retry.support.RetryTemplate;
 
+import com.nexr.framework.workflow.StepContext;
 import com.nexr.framework.workflow.Tasklet;
 
 /**
+ * Tasklet 중 Retry 
+ * 
  * @author dani.kim@nexr.com
  */
 public abstract class RetryableDFSTaskletSupport implements Tasklet {
@@ -24,6 +27,10 @@ public abstract class RetryableDFSTaskletSupport implements Tasklet {
 	protected RetryTemplate retryTemplate;
 	
 	public RetryableDFSTaskletSupport() {
+		this(10);
+	}
+	
+	public RetryableDFSTaskletSupport(int retryCount) {
 		retryTemplate = new RetryTemplate();
 		retryTemplate.setBackOffPolicy(new ExponentialBackOffPolicy());
 		Map<Class<? extends Throwable>, Boolean> retryableExecptions = new HashMap<Class<? extends Throwable>, Boolean>();
@@ -41,5 +48,24 @@ public abstract class RetryableDFSTaskletSupport implements Tasklet {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+	
+	@Override
+	public String run(final StepContext context) {
+		try {
+			return retryTemplate.execute(new RetryCallback<String>() {
+				@Override
+				public String doWithRetry(RetryContext retryContext)
+						throws Exception {
+					return doRun(context);
+				}
+			});
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	protected String doRun(StepContext context) {
+		throw new RuntimeException();
 	}
 }

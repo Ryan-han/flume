@@ -20,7 +20,7 @@ public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	@Override
-	public String run(StepContext context) {
+	public String doRun(StepContext context) {
 		List<String> params = new ArrayList<String>();
 		params.add(context.getConfig().get(RollingConstants.INPUT_PATH, null) + File.separator + "*" + File.separator + "*" + File.separator + "*");
 		params.add(context.getConfig().get(RollingConstants.OUTPUT_PATH, null));

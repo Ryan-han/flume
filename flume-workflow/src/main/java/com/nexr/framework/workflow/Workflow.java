@@ -6,7 +6,6 @@ package com.nexr.framework.workflow;
 public class Workflow {
 	private Steps steps;
 	private Steps footprints;
-	private String current;
 	
 	public Workflow(Steps steps, Steps footprints) {
 		this.steps = steps;
@@ -47,33 +46,4 @@ public class Workflow {
 	public synchronized Steps getFootprints() {
 		return new Steps(footprints);
 	}
-	
-//	public void setCurrent(String current) {
-//		this.current = current;
-//	}
-//	
-//	public Step next() {
-//		return forward(current);
-//	}
-//
-//	public Step forward(String name) {
-//		if (name == null) {
-//			current = steps.first().getName();
-//		} else {
-//			current = steps.get(name).getNext();
-//		}
-//		if (current != null) {
-//			footprints.add(steps.get(current));
-//			return footprints.last();
-//		}
-//		return null;
-//	}
-//
-//	public boolean hasNext() {
-//		Step current = steps.get(this.current);
-//		if (current == null || current.getNext() == null) {
-//			return false;
-//		}
-//		return true;
-//	}
 }

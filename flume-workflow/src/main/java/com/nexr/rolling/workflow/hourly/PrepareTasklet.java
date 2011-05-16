@@ -26,10 +26,6 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 		}
 	};
 
-	public PrepareTasklet() {
-		super();
-	}
-	
 	@Override
 	public String run(StepContext context) {
 		Path sourcePath = new Path(context.getConfig().get(RollingConstants.HOURLY_MR_RAW_PATH, ""));

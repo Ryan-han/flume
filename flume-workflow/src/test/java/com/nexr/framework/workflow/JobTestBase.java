@@ -4,8 +4,6 @@ import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.util.Map;
-
 import com.nexr.framework.workflow.listener.JobExecutionListener;
 import com.nexr.framework.workflow.listener.JobLauncherListener;
 import com.nexr.framework.workflow.listener.StepExecutionListener;
@@ -21,49 +19,20 @@ public abstract class JobTestBase {
 		return launcher;
 	}
 	
-	protected Job createJob(final String name, final Steps steps) {
-		Job job = new Job() {
-			@Override
-			public String getName() {
-				return name;
-			}
-
-			@Override
-			public boolean isRecoverable() {
-				return false;
-			}
-
-			@Override
-			public Steps getSteps() {
-				return steps;
-			}
-
-			@Override
-			public Map<String, String> getParameters() {
-				return null;
-			}
-			
-			@Override
-			public void addParameter(String name, String value) {
-			}
-
-			@Override
-			public void execute(JobExecution execution) throws JobExecutionException {
-			}
-		};
-		return job;
+	protected AbstractJob createJob(String name, Steps steps) {
+		return new FlowJob(name, steps);
 	}
 	
-	protected Job createSimpleJob(String name, Steps steps, JobExecutionDao executionDao) {
+	protected AbstractJob createSimpleJob(String name, Steps steps, JobExecutionDao executionDao) {
 		return createSimpleJob(name, steps, executionDao, null);
 	}
 	
-	protected Job createSimpleJob(String name, Steps steps, JobExecutionDao executionDao, JobExecutionListener listener) {
+	protected AbstractJob createSimpleJob(String name, Steps steps, JobExecutionDao executionDao, JobExecutionListener listener) {
 		return createSimpleJob(name, steps, executionDao, listener, null);
 	}
 	
-	protected Job createSimpleJob(String name, Steps steps, JobExecutionDao executionDao, JobExecutionListener listener, StepExecutionListener steplistener) {
-		SimpleJob job = new SimpleJob();
+	protected AbstractJob createSimpleJob(String name, Steps steps, JobExecutionDao executionDao, JobExecutionListener listener, StepExecutionListener steplistener) {
+		FlowJob job = new FlowJob();
 		job.setName(name);
 		job.setSteps(steps);
 		job.setExecutionDao(executionDao);
