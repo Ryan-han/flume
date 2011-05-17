@@ -32,6 +32,14 @@ public class InitTasklet extends RetryableDFSTaskletSupport {
 			}
 			if (fs.exists(outputPath)) {
 				fs.delete(outputPath, true);
+		Path input = new Path(context.getConfig().get(RollingConstants.INPUT_PATH, null));
+		Path output = new Path(context.getConfig().get(RollingConstants.OUTPUT_PATH, null));
+		try {
+			if (!fs.exists(input)) {
+				fs.mkdirs(input);
+			}
+			if (fs.exists(output)) {
+				fs.delete(output, true);
 			}
 		} catch (IOException e) {
 			throw new RuntimeException(e);
