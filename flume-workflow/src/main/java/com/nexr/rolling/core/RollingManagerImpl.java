@@ -336,6 +336,7 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 			
 			scheduler.addDailyJobToScheduler(rollingConfig);
 			scheduler.addHourlyJobToScheduler(rollingConfig);
+			scheduler.addPostJobToScheduler(rollingConfig);
 			
 		} catch (Exception e) {
 			// TODO Auto-generated catch block

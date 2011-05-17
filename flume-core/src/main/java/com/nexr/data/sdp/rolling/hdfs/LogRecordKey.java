@@ -8,11 +8,11 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 	static {
 		_rio_recTypeInfo = new org.apache.hadoop.record.meta.RecordTypeInfo(
 				"ChukwaRecordKey");
+		_rio_recTypeInfo.addField("logId",
+				org.apache.hadoop.record.meta.TypeID.StringTypeID);
 		_rio_recTypeInfo.addField("dataType",
 				org.apache.hadoop.record.meta.TypeID.StringTypeID);
 		_rio_recTypeInfo.addField("time",
-				org.apache.hadoop.record.meta.TypeID.StringTypeID);
-		_rio_recTypeInfo.addField("logId",
 				org.apache.hadoop.record.meta.TypeID.StringTypeID);
 	}
 
@@ -24,9 +24,9 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 	}
 
 	public LogRecordKey(final String dataType, final String time, final String logId) {
+		this.logId = logId;
 		this.dataType = dataType;
 		this.time = time;
-		this.logId = logId;
 	}
 
 	public static org.apache.hadoop.record.meta.RecordTypeInfo getTypeInfo() {
@@ -102,9 +102,9 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 	public void serialize(final org.apache.hadoop.record.RecordOutput _rio_a,
 			final String _rio_tag) throws java.io.IOException {
 		_rio_a.startRecord(this, _rio_tag);
+		_rio_a.writeString(logId, "logId");
 		_rio_a.writeString(dataType, "dataType");
 		_rio_a.writeString(time, "time");
-		_rio_a.writeString(logId, "logId");
 		_rio_a.endRecord(this, _rio_tag);
 	}
 
@@ -112,9 +112,9 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 			final org.apache.hadoop.record.RecordInput _rio_a,
 			final String _rio_tag) throws java.io.IOException {
 		_rio_a.startRecord(_rio_tag);
+		logId = _rio_a.readString("logId");
 		dataType = _rio_a.readString("dataType");
 		time = _rio_a.readString("time");
-		logId = _rio_a.readString("logId");
 		_rio_a.endRecord(_rio_tag);
 	}
 
@@ -129,11 +129,11 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 		setupRtiFields();
 		for (int _rio_i = 0; _rio_i < _rio_rtiFilter.getFieldTypeInfos().size(); _rio_i++) {
 			if (1 == _rio_rtiFilterFields[_rio_i]) {
-				dataType = _rio_a.readString("dataType");
-			} else if (2 == _rio_rtiFilterFields[_rio_i]) {
-				time = _rio_a.readString("time");
-			} else if (3 == _rio_rtiFilterFields[_rio_i]) {
 				logId = _rio_a.readString("logId");
+			} else if (2 == _rio_rtiFilterFields[_rio_i]) {
+				dataType = _rio_a.readString("dataType");
+			} else if (3 == _rio_rtiFilterFields[_rio_i]) {
+				time = _rio_a.readString("time");
 			}  else {
 				java.util.ArrayList<org.apache.hadoop.record.meta.FieldTypeInfo> typeInfos = (java.util.ArrayList<org.apache.hadoop.record.meta.FieldTypeInfo>) (_rio_rtiFilter
 						.getFieldTypeInfos());
@@ -152,12 +152,12 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 		}
 		LogRecordKey _rio_peer = (LogRecordKey) _rio_peer_;
 		int _rio_ret = 0;
-		_rio_ret = dataType.compareTo(_rio_peer.dataType);
-		if (_rio_ret != 0)
-			return _rio_ret;
-		_rio_ret = time.compareTo(_rio_peer.time);
-		if (_rio_ret != 0)
-			return _rio_ret;
+//		_rio_ret = dataType.compareTo(_rio_peer.dataType);
+//		if (_rio_ret != 0)
+//			return _rio_ret;
+//		_rio_ret = time.compareTo(_rio_peer.time);
+//		if (_rio_ret != 0)
+//			return _rio_ret;
 		_rio_ret = logId.compareTo(_rio_peer.logId);
 		if (_rio_ret != 0)
 			return _rio_ret;
@@ -174,13 +174,13 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 		}
 		LogRecordKey _rio_peer = (LogRecordKey) _rio_peer_;
 		boolean _rio_ret = false;
+		_rio_ret = logId.equals(_rio_peer.logId);
+		if (!_rio_ret)
+			return _rio_ret;
 		_rio_ret = dataType.equals(_rio_peer.dataType);
 		if (!_rio_ret)
 			return _rio_ret;
 		_rio_ret = time.equals(_rio_peer.time);
-		if (!_rio_ret)
-			return _rio_ret;
-		_rio_ret = logId.equals(_rio_peer.logId);
 		if (!_rio_ret)
 			return _rio_ret;
 		return _rio_ret;
@@ -188,20 +188,20 @@ public class LogRecordKey extends org.apache.hadoop.record.Record {
 
 	public Object clone() throws CloneNotSupportedException {
 		LogRecordKey _rio_other = new LogRecordKey();
+		_rio_other.logId = this.logId;
 		_rio_other.dataType = this.dataType;
 		_rio_other.time = this.time;
-		_rio_other.logId = this.logId;
 		return _rio_other;
 	}
 
 	public int hashCode() {
 		int _rio_result = 17;
 		int _rio_ret;
+		_rio_ret = logId.hashCode();
+		_rio_result = 37 * _rio_result + _rio_ret;
 		_rio_ret = dataType.hashCode();
 		_rio_result = 37 * _rio_result + _rio_ret;
 		_rio_ret = time.hashCode();
-		_rio_result = 37 * _rio_result + _rio_ret;
-		_rio_ret = logId.hashCode();
 		_rio_result = 37 * _rio_result + _rio_ret;
 		return _rio_result;
 	}

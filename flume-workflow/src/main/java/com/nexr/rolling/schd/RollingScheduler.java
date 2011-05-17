@@ -22,6 +22,7 @@ public class RollingScheduler {
 	Scheduler scheduler = null;
 	JobDetail hourlyJob = null;
 	JobDetail dailyJob = null;
+	JobDetail postJob = null;
 	
 	public static Scheduler getInstance() {
 		if (sched == null) {
@@ -49,6 +50,33 @@ public class RollingScheduler {
 		RollingScheduler.getInstance().shutdown(true);
 		sched = null;
 		startScheuler();
+	}
+	
+	public void addPostJobToScheduler(RollingConfig rollingConfig)
+			throws Exception {
+		String postScheduleName = "Post Rolling";
+		postJob = new JobDetail();
+		postJob.getJobDataMap().put("config", rollingConfig);
+		
+		postJob.setName(postScheduleName);
+		postJob.setGroup(postScheduleName + " group");
+		postJob.setJobClass(com.nexr.rolling.schd.PostTask.class);
+		
+		CronTrigger postCronTrigger = new CronTrigger();
+		postCronTrigger.setName(postScheduleName);
+		postCronTrigger.setGroup(postScheduleName  + " group");
+		postCronTrigger.setJobName(postScheduleName);
+		postCronTrigger.setJobGroup(postScheduleName + " group");
+		postCronTrigger.setStartTime(new Date());
+		
+		if (log.isInfoEnabled()) {
+			log.info("CRON_TYPE Expression : "
+					+ rollingConfig.getHourlySchedule());
+		}
+		
+		postCronTrigger.setCronExpression(rollingConfig.getPostSchedule()
+				.trim());
+		getInstance().scheduleJob(postJob, postCronTrigger);
 	}
 	
 	public void addHourlyJobToScheduler(RollingConfig rollingConfig)
