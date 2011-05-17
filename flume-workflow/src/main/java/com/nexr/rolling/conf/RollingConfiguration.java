@@ -12,7 +12,10 @@ public class RollingConfiguration extends Configuration {
 	public static final String ROLLING_CONFIG_PATH = "rolling.config.path";
 	public static final String ROLLING_MEMBER_PATH = "rolling.member.path";
 	public static final String ROLLING_MASTER_PATH = "rolling.master.path";
-	public static final String DEDUP_PATH = "dedup.path";
+	public static final String DEDUP_ROOT_PATH = "dedup.root.path";
+	public static final String DEDUP_POST_PATH = "dedup.post.path";
+	public static final String DEDUP_HOURLY_PATH = "dedup.hourly.path";
+	public static final String DEDUP_DAILY_PATH = "dedup.daily.path";
 	
 	public static RollingConfiguration getInstance() {
 		return conf;
@@ -54,8 +57,20 @@ public class RollingConfiguration extends Configuration {
 		return getProperty(ROLLING_MASTER_PATH);
 	}
 	
-	public String getDedupPath() {
-		return getProperty(DEDUP_PATH);
+	public String getDedupRootPath() {
+		return getProperty(DEDUP_ROOT_PATH);
+	}
+	
+	public String getDedupPostPath() {
+		return getProperty(DEDUP_POST_PATH);
+	}
+	
+	public String getDedupHourlyPath() {
+		return getProperty(DEDUP_HOURLY_PATH);
+	}
+	
+	public String getDedupDailyPath() {
+		return getProperty(DEDUP_DAILY_PATH);
 	}
 	
 	

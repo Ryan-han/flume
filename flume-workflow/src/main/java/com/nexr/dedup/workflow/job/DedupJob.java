@@ -1,4 +1,4 @@
-package com.nexr.dedup.job;
+package com.nexr.dedup.workflow.job;
 
 import com.nexr.framework.workflow.FlowJob;
 import com.nexr.framework.workflow.Step;

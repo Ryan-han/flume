@@ -30,6 +30,9 @@ public class RollingConfig {
 	
 	public static final String DEDUP_MR_INPUT_PATH = "dedup.mr.input.path";
 	public static final String DEDUP_MR_OUTPUT_PATH = "dedup.mr.output.path";
+	public static final String DEDUP_POST_PATH = "dedup.post.path";
+	public static final String DEDUP_HOURLY_PATH = "dedup.hourly.path";
+	public static final String DEDUP_DAILY_PATH = "dedup.daily.path";
 
 	private String rawPath;
 	private String postMrResultPath;
@@ -54,6 +57,10 @@ public class RollingConfig {
 	
 	private String dedupMrInputPath;
 	private String dedupMrOutputPath;
+
+	private String dedupPostPath;
+	private String dedupHourlyPath;
+	private String dedupDailyPath;
 
 	public String getRawPath() {
 		return rawPath;
@@ -199,6 +206,30 @@ public class RollingConfig {
 		this.dedupMrOutputPath = dedupMrOutputPath;
 	}
 
+	public String getDedupPostPath() {
+		return dedupPostPath;
+	}
+
+	public void setDedupPostPath(String dedupPostPath) {
+		this.dedupPostPath = dedupPostPath;
+	}
+
+	public String getDedupHourlyPath() {
+		return dedupHourlyPath;
+	}
+
+	public void setDedupHourlyPath(String dedupHourlyPath) {
+		this.dedupHourlyPath = dedupHourlyPath;
+	}
+
+	public String getDedupDailyPath() {
+		return dedupDailyPath;
+	}
+
+	public void setDedupDailyPath(String dedupDailyPath) {
+		this.dedupDailyPath = dedupDailyPath;
+	}
+
 	@Override
 	public String toString() {
 		return "RollingConfig [rawPath=" + rawPath + ", postMrResultPath="
@@ -215,9 +246,8 @@ public class RollingConfig {
 				+ postSchedule + ", hourlySchedule=" + hourlySchedule
 				+ ", dailySchedule=" + dailySchedule + ", dedupMrInputPath="
 				+ dedupMrInputPath + ", dedupMrOutputPath=" + dedupMrOutputPath
-				+ "]";
+				+ ", dedupPostPath=" + dedupPostPath + ", dedupHourlyPath="
+				+ dedupHourlyPath + ", dedupDailyPath=" + dedupDailyPath + "]";
 	}
-
-	
 
 }

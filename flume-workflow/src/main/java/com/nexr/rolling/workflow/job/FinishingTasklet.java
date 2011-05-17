@@ -30,8 +30,8 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 
 	@Override
 	public String doRun(StepContext context) {
-		String output = context.getConfig().get(RollingConstants.OUTPUT_PATH, null);
-		String result = context.getConfig().get(RollingConstants.RESULT_PATH, null);
+		String output = context.get(RollingConstants.OUTPUT_PATH, null);
+		String result = context.get(RollingConstants.RESULT_PATH, null);
 
 		Path sourcePath = new Path(output);
 		try {

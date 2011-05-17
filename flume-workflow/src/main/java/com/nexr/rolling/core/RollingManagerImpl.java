@@ -1,7 +1,9 @@
 package com.nexr.rolling.core;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -40,6 +42,10 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 	private String rollingMemberPath = null;
 	private String rollingMasterPath = null;
 	
+	private String dedupPostPath = null;
+	private String dedupHourlyPath = null;
+	private String dedupDailyPath = null;
+	
 	@Override
 	public void init(DaemonContext arg0) throws DaemonInitException, Exception {
 		// TODO Auto-generated method stub
@@ -48,6 +54,10 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 		rollingConfigPath = conf.getRollingRootPath() + conf.getRollingConfigPath();
 		rollingMemberPath = conf.getRollingRootPath() + conf.getRollingMemberPath();
 		rollingMasterPath = conf.getRollingRootPath() + conf.getRollingMasterPath();
+		
+		dedupPostPath = conf.getDedupRootPath() + conf.getDedupPostPath();
+		dedupHourlyPath = conf.getDedupRootPath() + conf.getDedupHourlyPath();
+		dedupDailyPath = conf.getDedupRootPath() + conf.getDedupDailyPath();
 		
 		
 		hostName = getLocalhostName();
@@ -60,6 +70,66 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 		
 		zkClient.subscribeChildChanges(rollingMemberPath, this);
 		zkClient.subscribeChildChanges(rollingMasterPath, this);
+		
+		if(!zkClient.exists(conf.getDedupRootPath())){
+			zkClient.createPersistent(conf.getDedupRootPath());
+			zkClient.createPersistent(dedupPostPath);
+			zkClient.createPersistent(dedupHourlyPath);
+			zkClient.createPersistent(dedupDailyPath);
+		}
+		
+		//dedup
+		zkClient.subscribeChildChanges(dedupPostPath, new IZkChildListener() {
+			@Override
+			public void handleChildChange(String parentPath, List<String> currentChilds)
+					throws Exception {
+				// TODO Auto-generated method stub
+				log.info("Post Mr Result is Duplicacted");
+								
+				log.info("Dedup List");
+				for(String dedup : currentChilds){
+					dedup = dedup.replace(":", "/");
+					log.info(dedup);
+				}
+				
+				PostDedupJob postDedupJob;
+				for(String dedup : currentChilds){
+					postDedupJob = new PostDedupJob(dedup);
+					postDedupJob.initDedupMr();
+					postDedupJob.movePostDedupMrData();
+					postDedupJob.runPostDedupMr();
+				}
+			}
+		});
+		
+		zkClient.subscribeChildChanges(dedupHourlyPath, new IZkChildListener() {
+			@Override
+			public void handleChildChange(String parentPath, List<String> currentChilds)
+					throws Exception {
+				// TODO Auto-generated method stub
+				log.info("Hourly Mr Result is Duplicacted");
+				log.info("Dedup List");
+				for(String dedup : currentChilds){
+					dedup = dedup.replace(":", "/");
+					log.info(dedup);
+				}	
+			}
+		});
+		
+		
+		zkClient.subscribeChildChanges(dedupDailyPath, new IZkChildListener() {
+			@Override
+			public void handleChildChange(String parentPath, List<String> currentChilds)
+					throws Exception {
+				// TODO Auto-generated method stub
+				log.info("Daily Mr Result is Duplicacted");
+				log.info("Dedup List");
+				for(String dedup : currentChilds){
+					dedup = dedup.replace(":", "/");
+					log.info(dedup);
+				}	
+			}
+		});
 		
 		try {
 			zkClient.getEventLock().lock();
@@ -191,6 +261,15 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 			if (value.startsWith(RollingConfig.RAW_PATH)) {
 				rollingConfig.setRawPath(value.substring(value.indexOf("=")+1,
 						value.length()).trim());
+			} else if (value.startsWith(RollingConfig.POST_MR_INPUT_PATH)) {
+				rollingConfig.setPostMrInputPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.POST_MR_OUTPUT_PATH)) {
+				rollingConfig.setPostMrOutputPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.POST_MR_RESULT_PATH)) {
+				rollingConfig.setPostMrResultPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
 			} else if (value.startsWith(RollingConfig.HOURLY_MR_INPUT_PATH)) {
 				rollingConfig.setHourlyMrInputPath(value.substring(
 						value.indexOf("=")+1, value.length()).trim());
@@ -218,11 +297,29 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 			} else if (value.startsWith(RollingConfig.NOTIFY_EMAIL)) {
 				rollingConfig.setNotifyEmail(value.substring(
 						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.POST_SCHEDULE)) {
+				rollingConfig.setPostSchedule(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
 			} else if (value.startsWith(RollingConfig.HOURLY_SCHEDULE)) {
 				rollingConfig.setHourlySchedule(value.substring(
 						value.indexOf("=")+1, value.length()).trim());
 			} else if (value.startsWith(RollingConfig.DAILY_SCHEDULE)) {
 				rollingConfig.setDailySchedule(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.DEDUP_MR_INPUT_PATH)) {
+				rollingConfig.setDedupMrInputPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.DEDUP_MR_OUTPUT_PATH)) {
+				rollingConfig.setDedupMrOutputPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.DEDUP_POST_PATH)) {
+				rollingConfig.setDedupPostPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.DEDUP_HOURLY_PATH)) {
+				rollingConfig.setDedupHourlyPath(value.substring(
+						value.indexOf("=")+1, value.length()).trim());
+			} else if (value.startsWith(RollingConfig.DEDUP_DAILY_PATH)) {
+				rollingConfig.setDedupDailyPath(value.substring(
 						value.indexOf("=")+1, value.length()).trim());
 			}
 		}

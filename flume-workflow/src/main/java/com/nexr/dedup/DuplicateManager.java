@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.nexr.dedup.job.DedupJob;
+import com.nexr.dedup.workflow.job.DedupJob;
 import com.nexr.framework.workflow.JobExecutionException;
 import com.nexr.framework.workflow.JobLauncher;
 import com.nexr.rolling.workflow.ZkClientFactory;
@@ -76,17 +76,14 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	
 	@Override
 	public synchronized void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
-		int len = currentChilds.size();
-		for (int i = len - 1; i >= 0; i--) {
-			String child = currentChilds.get(i);
-			if (duplications.containsKey(child)) {
-				break;
-			}
-			Object json = client.readData(String.format("%s/%s", DEDUP_QUEUE, child));
-			if (json != null) {
-				Duplication duplication = Duplication.JsonDeserializer.deserialize(json.toString());
-				queue.add(duplication);
-				duplications.put(child, duplication);
+		for (String child : currentChilds) {
+			if (!duplications.containsKey(child)) {
+				Object json = client.readData(String.format("%s/%s", DEDUP_QUEUE, child));
+				if (json != null) {
+					Duplication duplication = Duplication.JsonDeserializer.deserialize(json.toString());
+					queue.add(duplication);
+					duplications.put(child, duplication);
+				}
 			}
 		}
 		notifyAll();
