@@ -30,6 +30,7 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 
 	@Override
 	public String doRun(StepContext context) {
+		String jobType = context.getConfig().get(RollingConstants.JOB_TYPE, null);
 		String output = context.get(RollingConstants.OUTPUT_PATH, null);
 		String result = context.get(RollingConstants.RESULT_PATH, null);
 
@@ -57,7 +58,7 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 						String typeName = type.getPath().getName();
 						String groupName = group.getPath().getName();
 						LOG.info("Duplication was occured. path: {}/{}", typeName, groupName);
-						duplicated.add(Duplication.JsonSerializer.serialize(new Duplication(output, result, String.format("%s/%s", typeName, groupName))));
+						duplicated.add(Duplication.JsonSerializer.serialize(new Duplication(jobType, output, result, String.format("%s/%s", typeName, groupName))));
 						continue;
 					}
 					for (FileStatus file : partials) {
@@ -78,6 +79,6 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
-		return "cleanUp";
+		return String.format("%s-%s", "finishing", jobType);
 	}
 }

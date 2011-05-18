@@ -15,6 +15,9 @@ public class RollingJob extends FlowJob {
 		steps.add(new Step("prepare", PrepareTasklet.class));
 		steps.add(new Step("run", RunRollingMRTasklet.class));
 		steps.add(new Step("finishing", FinishingTasklet.class));
+		steps.add(new Step("finishing-post", FinishedTasklet.class));
+		steps.add(new Step("finishing-hourly", FinishedTasklet.class));
+		steps.add(new Step("finishing-daily", FinishedTasklet.class));
 		steps.add(new Step("duplicate", DuplicateTasklet.class));
 		steps.add(new Step("cleanUp", CleanUpTasklet.class));
 	}
