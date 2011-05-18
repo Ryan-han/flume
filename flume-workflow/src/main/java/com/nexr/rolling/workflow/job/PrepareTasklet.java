@@ -32,35 +32,28 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 	public String doRun(StepContext context) {
 		Path sourcePath = new Path(context.get(RollingConstants.RAW_PATH, null));
 		try {
-			FileStatus[] types = fs.listStatus(sourcePath);
-			for (FileStatus type : types) {
-				String input = context.get(RollingConstants.INPUT_PATH, null);
-				if (!fs.exists(new Path(input, type.getPath().getName()))) {
-					fs.mkdirs(new Path(input, type.getPath().getName()));
-				}
-				String isCollectorSource = context.getConfig().get(RollingConstants.IS_COLLECTOR_SOURCE, "false");
-				if ("true".equals(isCollectorSource)) {
-					FileStatus[] collectorSources = fs.listStatus(new Path(sourcePath, type.getPath().getName()), DATA_FILTER);
-					for (FileStatus file : collectorSources) {
-						rename(file.getPath(), String.format("%s/%s/%s/%s", input, type.getPath().getName(), System.currentTimeMillis()));
-					}
-				} else {
-					FileStatus[] timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
-					for (FileStatus file : timegroups) {
-						rename(file.getPath(), String.format("%s/%s/%s", input, type.getPath().getName()));
-					}
-				}
-			}
+			boolean isCollectorSource = context.getConfig().getBoolean(RollingConstants.IS_COLLECTOR_SOURCE, false);
+			int depth = renameTo(fs.listStatus(sourcePath), context.get(RollingConstants.INPUT_PATH, null), isCollectorSource);
+			context.set(RollingConstants.INPUT_DEPTH, Integer.toString(depth));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 		return "run";
 	}
 
-	private void rename(Path source, String destDir) throws IOException {
-		if (!fs.exists(new Path(destDir))) {
-			fs.mkdirs(new Path(destDir));
+	private int renameTo(FileStatus[] files, String destination, boolean isCollectorSource) throws IOException {
+		int depth = 1;
+		for (FileStatus file : files) {
+			if (file.isDir()) {
+				depth += renameTo(fs.listStatus(file.getPath()), String.format("%s/%s", destination, file.getPath().getName()), isCollectorSource);
+			} else {
+				Path destinationPath = new Path(destination);
+				if (!fs.exists(destinationPath)) {
+					fs.mkdirs(destinationPath);
+				}
+				fs.rename(file.getPath(), destinationPath);
+			}
 		}
-		fs.rename(source, new Path(destDir));
+		return depth;
 	}
 }

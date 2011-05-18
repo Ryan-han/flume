@@ -1,6 +1,5 @@
 package com.nexr.rolling.workflow.job;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,10 +23,10 @@ public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 	@Override
 	public String doRun(StepContext context) {
 		List<String> params = new ArrayList<String>();
-		params.add(context.get(RollingConstants.INPUT_PATH, null) + File.separator + "*" + File.separator + "*" + File.separator + "*");
+		params.add(createInputPath(context.get(RollingConstants.INPUT_PATH, null), context.getInt(RollingConstants.INPUT_DEPTH, 1)));
 		params.add(context.get(RollingConstants.OUTPUT_PATH, null));
 
-		LOG.info("Running Rolling M/R Job");
+		LOG.info("Running Rolling M/R Job. Input: {}, Output: {}", params.get(0), params.get(1));
 		try {
 			String[] args = params.toArray(new String[params.size()]);
 			
@@ -40,5 +39,14 @@ public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 			throw new RuntimeException(e);
 		}
 		return "finishing";
+	}
+
+	protected String createInputPath(String path, int depth) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(path);
+		for (int i = 0; i < depth; i++) {
+			sb.append("/*");
+		}
+		return sb.toString();
 	}
 }

@@ -16,4 +16,5 @@ public class RollingConstants {
 	public static final String RESULT_PATH = "result.path";
 	
 	public static final String TODAY_PATH = "today.path";
+	public static final String INPUT_DEPTH = "input.depth";
 }
