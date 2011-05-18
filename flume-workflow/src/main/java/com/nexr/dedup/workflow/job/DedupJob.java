@@ -27,7 +27,7 @@ public class DedupJob extends FlowJob {
 	public DedupJob(Duplication duplication) {
 		super("dedup", steps, true);
 		addParameter("path", duplication.getPath());
-		addParameter("source", duplication.getSource());
-		addParameter("destination", duplication.getDestination());
+		addParameter("source", duplication.getNewSource());
+		addParameter("destination", duplication.getSource());
 	}
 }

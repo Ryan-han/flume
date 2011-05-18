@@ -18,6 +18,7 @@
 		<spring.version>3.0.5.RELEASE</spring.version>
 		<quartz.version>1.7.2</quartz.version>
 		<daemon.version>1.0.5</daemon.version>
+		<hadoop.version>0.20.2</hadoop.version>
 	</properties>
 
 	<dependencies>
@@ -25,6 +26,17 @@
 			<groupId>com.cloudera</groupId>
 			<artifactId>flume-core</artifactId>
 			<version>0.9.4-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-core</artifactId>
+			<version>${hadoop.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.hadoop</groupId>
+			<artifactId>hadoop-test</artifactId>
+			<version>${hadoop.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>log4j</groupId>

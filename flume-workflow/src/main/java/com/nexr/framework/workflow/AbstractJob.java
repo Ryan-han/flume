@@ -1,7 +1,7 @@
 package com.nexr.framework.workflow;
 
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +37,7 @@ public abstract class AbstractJob implements Job {
 		this.steps = new Steps(steps);
 		this.name = name;
 		this.recoverable = recoverable;
-		this.parameters = new HashMap<String, String>();
+		this.parameters = new LinkedHashMap<String, String>();
 		parameters.put("job.class", getClass().getName());
 	}
 

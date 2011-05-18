@@ -61,6 +61,8 @@ public class RollingConfig {
 	private String dedupPostPath;
 	private String dedupHourlyPath;
 	private String dedupDailyPath;
+	
+	private String todayPath;
 
 	public String getRawPath() {
 		return rawPath;
@@ -228,6 +230,14 @@ public class RollingConfig {
 
 	public void setDedupDailyPath(String dedupDailyPath) {
 		this.dedupDailyPath = dedupDailyPath;
+	}
+	
+	public String getTodayPath() {
+		return todayPath;
+	}
+	
+	public void setTodayPath(String todayPath) {
+		this.todayPath = todayPath;
 	}
 
 	@Override

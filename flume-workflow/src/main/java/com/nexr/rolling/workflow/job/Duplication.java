@@ -6,8 +6,9 @@ import org.codehaus.jackson.map.ObjectMapper;
  * @author dani.kim@nexr.com
  */
 public class Duplication {
+	private String type;
+	private String newSource;
 	private String source;
-	private String destination;
 	private String path;
 	
 	public static class JsonSerializer {
@@ -33,26 +34,35 @@ public class Duplication {
 	public Duplication() {
 	}
 
-	public Duplication(String source, String destination, String path) {
+	public Duplication(String type, String newSource, String source, String path) {
+		this.type = type;
+		this.newSource = newSource;
 		this.source = source;
-		this.destination = destination;
 		this.path = path;
 	}
 	
+	public String getType() {
+		return type;
+	}
+	
+	public void setType(String type) {
+		this.type = type;
+	}
+	
+	public String getNewSource() {
+		return newSource;
+	}
+
+	public void setNewSource(String newSource) {
+		this.newSource = newSource;
+	}
+
 	public String getSource() {
 		return source;
 	}
 
 	public void setSource(String source) {
 		this.source = source;
-	}
-
-	public String getDestination() {
-		return destination;
-	}
-
-	public void setDestination(String destination) {
-		this.destination = destination;
 	}
 
 	public String getPath() {

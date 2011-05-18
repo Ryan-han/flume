@@ -38,13 +38,14 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 				if (!fs.exists(new Path(input, type.getPath().getName()))) {
 					fs.mkdirs(new Path(input, type.getPath().getName()));
 				}
-				FileStatus[] timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
 				String isCollectorSource = context.getConfig().get(RollingConstants.IS_COLLECTOR_SOURCE, "false");
 				if ("true".equals(isCollectorSource)) {
-					for (FileStatus file : timegroups) {
+					FileStatus[] collectorSources = fs.listStatus(new Path(sourcePath, type.getPath().getName()), DATA_FILTER);
+					for (FileStatus file : collectorSources) {
 						rename(file.getPath(), String.format("%s/%s/%s/%s", input, type.getPath().getName(), System.currentTimeMillis()));
 					}
 				} else {
+					FileStatus[] timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
 					for (FileStatus file : timegroups) {
 						rename(file.getPath(), String.format("%s/%s/%s", input, type.getPath().getName()));
 					}

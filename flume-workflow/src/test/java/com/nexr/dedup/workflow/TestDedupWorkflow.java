@@ -15,7 +15,7 @@ public class TestDedupWorkflow extends DedupTestBase {
 	@Before
 	public void init() throws Exception {
 		new Thread(manager).start();
-		createDedupJob(new Duplication("", "", ""));
+		createDedupJob(new Duplication("", "", "", ""));
 
 		while (manager.isRunning()) {
 			Thread.sleep(10000);
