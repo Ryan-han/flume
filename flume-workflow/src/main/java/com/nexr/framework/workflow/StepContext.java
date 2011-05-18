@@ -62,7 +62,47 @@ public class StepContext {
 		public String get(String name, String defaultValue) {
 			return parameters.get(name) == null ? defaultValue : parameters.get(name);
 		}
-		
+
+		public boolean getBoolean(String name, boolean defaultValue) {
+			try {
+				return Boolean.parseBoolean(get(name, null));
+			} catch (Exception e) {
+				return defaultValue;
+			}
+		}
+
+		public int getInt(String name, int defaultValue) {
+			try {
+				return Integer.parseInt(get(name, null));
+			} catch (Exception e) {
+				return defaultValue;
+			}
+		}
+
+		public long getLong(String name, long defaultValue) {
+			try {
+				return Long.parseLong(get(name, null));
+			} catch (Exception e) {
+				return defaultValue;
+			}
+		}
+
+		public float getFloat(String name, float defaultValue) {
+			try {
+				return Float.parseFloat(get(name, null));
+			} catch (Exception e) {
+				return defaultValue;
+			}
+		}
+
+		public double getDouble(String name, double defaultValue) {
+			try {
+				return Double.parseDouble(get(name, null));
+			} catch (Exception e) {
+				return defaultValue;
+			}
+		}
+
 		public Collection<String> keys() {
 			return parameters.keySet();
 		}
