@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.nexr.dedup.workflow.job.DedupConstants;
+import com.nexr.dedup.workflow.DedupConstants;
 import com.nexr.dedup.workflow.job.DedupJob;
 import com.nexr.framework.workflow.JobExecutionException;
 import com.nexr.framework.workflow.JobLauncher;
