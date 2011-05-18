@@ -14,6 +14,8 @@ import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
 import com.nexr.rolling.workflow.RollingConstants;
 
 /**
+ * Rolling MR 실행해주는 태스클릿
+ * 
  * @author dani.kim@nexr.com
  */
 public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
@@ -22,8 +24,8 @@ public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 	@Override
 	public String doRun(StepContext context) {
 		List<String> params = new ArrayList<String>();
-		params.add(context.getConfig().get(RollingConstants.INPUT_PATH, null) + File.separator + "*" + File.separator + "*" + File.separator + "*");
-		params.add(context.getConfig().get(RollingConstants.OUTPUT_PATH, null));
+		params.add(context.get(RollingConstants.INPUT_PATH, null) + File.separator + "*" + File.separator + "*" + File.separator + "*");
+		params.add(context.get(RollingConstants.OUTPUT_PATH, null));
 
 		LOG.info("Running Rolling M/R Job");
 		try {
@@ -35,7 +37,7 @@ public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 				throw new RuntimeException("exitCode != 0");
 			}
 		} catch (Throwable e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 		return "finishing";
 	}

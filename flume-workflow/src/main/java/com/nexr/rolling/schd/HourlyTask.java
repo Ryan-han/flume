@@ -10,7 +10,6 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 
 import com.nexr.data.sdp.rolling.mr.HourlyRollingMr;
-import com.nexr.framework.workflow.JobExecution;
 import com.nexr.framework.workflow.JobLauncher;
 import com.nexr.rolling.core.RollingConfig;
 import com.nexr.rolling.workflow.RollingConstants;
