@@ -34,6 +34,7 @@
 
       <includes>
         <include>com.cloudera:flume-core</include>
+        <include>com.nexr:flume-workflow</include>
       </includes>
     </moduleSet>
 
