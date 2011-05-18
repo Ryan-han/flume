@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
+import com.nexr.dedup.workflow.job.DedupConstants;
 import com.nexr.dedup.workflow.job.DedupJob;
 import com.nexr.framework.workflow.JobExecutionException;
 import com.nexr.framework.workflow.JobLauncher;
@@ -51,6 +52,7 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 					wait();
 				} catch (InterruptedException e) {
 				}
+				continue;
 			}
 			execute(queue.poll());
 		}
@@ -58,6 +60,13 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	
 	private void execute(Duplication duplication) {
 		DedupJob job = ctx.getBean(DedupJob.class);
+		job.addParameter(DedupConstants.JOB_TYPE, duplication.getType());
+		job.addParameter(DedupConstants.PATH, duplication.getPath());
+		job.addParameter(DedupConstants.NEW_SOURCE_DIR, duplication.getNewSource());
+		job.addParameter(DedupConstants.SOURCE_DIR, duplication.getSource());
+		job.addParameter(DedupConstants.OUTPUT_PATH, String.format("%s/%s", "/dedup", duplication.getType()));
+		job.addParameter(DedupConstants.RESULT_PATH, duplication.getSource());
+		
 		try {
 			LOG.info("Starting Dedup Job : {}", duplication.getPath());
 			launcher.run(job);
