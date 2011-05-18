@@ -1,5 +1,6 @@
 package com.nexr.rolling.workflow;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -62,6 +63,11 @@ public abstract class RetryableDFSTaskletSupport implements Tasklet {
 			});
 		} catch (Exception e) {
 			throw new RuntimeException(e);
+		} finally {
+			try {
+				fs.close();
+			} catch (IOException e) {
+			}
 		}
 	}
 

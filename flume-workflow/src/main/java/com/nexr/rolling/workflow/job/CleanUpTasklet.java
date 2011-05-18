@@ -2,7 +2,6 @@ package com.nexr.rolling.workflow.job;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,15 +19,13 @@ public class CleanUpTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
 	@Override
-	public String doRun(StepContext context) {
-		String input = context.getConfig().get(RollingConstants.INPUT_PATH, null);
-		String output = context.getConfig().get(RollingConstants.OUTPUT_PATH, null);
-		LOG.info("Cleanup. Input: {}, Output: {}", new Object[] { input, output });
+	protected String doRun(StepContext context) {
+		String input = context.get(RollingConstants.INPUT_PATH, null);
+		String output = context.get(RollingConstants.OUTPUT_PATH, null);
+		LOG.info("Rolling Job Cleanup. Input: {}, Output: {}", new Object[] { input, output });
 		try {
-			fs = FileSystem.get(conf);
 			fs.delete(new Path(input), true);
 			fs.delete(new Path(output), true);
-			fs.close();
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
