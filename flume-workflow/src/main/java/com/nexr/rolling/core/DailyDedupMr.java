@@ -52,7 +52,6 @@ public class DailyDedupMr extends Configured implements Tool {
 
 	@Override
 	public int run(String[] args) throws Exception {
-		// TODO Auto-generated method stub
 		JobConf jobConf = new JobConf(getConf(), DailyDedupMr.class);
 		jobConf.setInputFormat(SequenceFileInputFormat.class);
 		jobConf.setMapperClass(IdentityMapper.class);
@@ -65,8 +64,10 @@ public class DailyDedupMr extends Configured implements Tool {
 		jobConf.setMapOutputValueClass(LogRecord.class);
 		jobConf.setMapOutputKeyClass(Text.class);
 		jobConf.setNumReduceTasks(3);
-		FileInputFormat.setInputPaths(jobConf, args[0]);
-		FileOutputFormat.setOutputPath(jobConf, new Path(args[1]));
+//		FileInputFormat.setInputPaths(jobConf, args[0]);
+		FileInputFormat.addInputPath(jobConf, new Path(args[0]));
+		FileInputFormat.addInputPath(jobConf, new Path(args[1]));
+		FileOutputFormat.setOutputPath(jobConf, new Path(args[2]));
 		JobClient.runJob(jobConf);
 		return 0;
 	}

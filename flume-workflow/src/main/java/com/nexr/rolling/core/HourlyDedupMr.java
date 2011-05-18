@@ -60,8 +60,10 @@ public class HourlyDedupMr extends Configured implements Tool {
 		jobConf.setOutputKeyClass(LogRecordKey.class);
 		jobConf.setOutputValueClass(LogRecord.class);
 		jobConf.setNumReduceTasks(3);
-		FileInputFormat.setInputPaths(jobConf, args[0]);
-		FileOutputFormat.setOutputPath(jobConf, new Path(args[1]));
+//		FileInputFormat.setInputPaths(jobConf, args[0]);
+		FileInputFormat.addInputPath(jobConf, new Path(args[0]));
+		FileInputFormat.addInputPath(jobConf, new Path(args[1]));
+		FileOutputFormat.setOutputPath(jobConf, new Path(args[2]));
 		JobClient.runJob(jobConf);
 		return 0;
 	}
