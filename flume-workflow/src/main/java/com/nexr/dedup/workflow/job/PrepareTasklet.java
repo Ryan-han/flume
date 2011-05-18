@@ -8,7 +8,7 @@ import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
  */
 public class PrepareTasklet extends RetryableDFSTaskletSupport {
 	@Override
-	protected String doRun(StepContext context) {
+	public String doRun(StepContext context) {
 		return "run";
 	}
 }
