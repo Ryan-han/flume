@@ -59,22 +59,37 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	}
 	
 	private void execute(Duplication duplication) {
-		DedupJob job = ctx.getBean(DedupJob.class);
-		job.addParameter(DedupConstants.JOB_TYPE, duplication.getType());
-		job.addParameter(DedupConstants.PATH, duplication.getPath());
-		job.addParameter(DedupConstants.NEW_SOURCE_DIR, duplication.getNewSource());
-		job.addParameter(DedupConstants.SOURCE_DIR, duplication.getSource());
-		job.addParameter(DedupConstants.OUTPUT_PATH, String.format("%s/%s", "/dedup", duplication.getType()));
-		job.addParameter(DedupConstants.RESULT_PATH, duplication.getSource());
-		
-		try {
-			LOG.info("Starting Dedup Job : {}", duplication.getPath());
-			launcher.run(job);
-		} catch (JobExecutionException e) {
-			e.printStackTrace();
+		if (validateDedupJob(duplication)) {
+			DedupJob job = ctx.getBean(DedupJob.class);
+			job.addParameter(DedupConstants.JOB_TYPE, duplication.getType());
+			job.addParameter(DedupConstants.PATH, duplication.getPath());
+			job.addParameter(DedupConstants.NEW_SOURCE_DIR, duplication.getNewSource());
+			job.addParameter(DedupConstants.SOURCE_DIR, duplication.getSource());
+			job.addParameter(DedupConstants.OUTPUT_PATH, String.format("%s/%s", "/dedup", duplication.getType()));
+			job.addParameter(DedupConstants.RESULT_PATH, duplication.getSource());
+			
+			String preffixOfClass = Character.toUpperCase(duplication.getType().charAt(0)) + duplication.getType().substring(1);
+			job.addParameter(DedupConstants.MR_CLASS, String.format("com.nexr.rolling.core.%sDedupMr", preffixOfClass));
+			
+			try {
+				LOG.info("Starting Dedup Job : {}", duplication.getPath());
+				launcher.run(job);
+			} catch (JobExecutionException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
+	private boolean validateDedupJob(Duplication duplication) {
+		if (duplication.getType() == null) {
+			return false;
+		}
+		if (duplication.getType().length() > 1) {
+			return false;
+		}
+		return true;
+	}
+
 	public boolean isRunning() {
 		return running;
 	}
