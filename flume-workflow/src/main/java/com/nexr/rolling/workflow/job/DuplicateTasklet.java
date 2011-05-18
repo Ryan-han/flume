@@ -1,11 +1,15 @@
 package com.nexr.rolling.workflow.job;
 
+import java.io.IOException;
+
 import org.I0Itec.zkclient.ZkClient;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.nexr.framework.workflow.StepContext;
 import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
+import com.nexr.rolling.workflow.RollingConstants;
 import com.nexr.rolling.workflow.ZkClientFactory;
 
 /**
@@ -26,6 +30,11 @@ public class DuplicateTasklet extends RetryableDFSTaskletSupport {
 			}
 			client.createPersistentSequential(String.format("%s/job-", DEDUP_QUEUE), context.get(String.format("duplicated.%s", i), null));
 		}
-		return "cleanUp";
+		try {
+			fs.delete(new Path(context.get(RollingConstants.OUTPUT_PATH, null)), true);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		return null;
 	}
 }
