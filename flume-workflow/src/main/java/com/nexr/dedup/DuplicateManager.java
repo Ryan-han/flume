@@ -63,8 +63,8 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 			DedupJob job = ctx.getBean(DedupJob.class);
 			job.addParameter(DedupConstants.JOB_TYPE, duplication.getType());
 			job.addParameter(DedupConstants.PATH, duplication.getPath());
-			job.addParameter(DedupConstants.NEW_SOURCE_DIR, duplication.getNewSource());
-			job.addParameter(DedupConstants.SOURCE_DIR, duplication.getSource());
+			job.addParameter(DedupConstants.NEW_SOURCE_DIR, String.format("%s/%s", duplication.getNewSource(), duplication.getPath()));
+			job.addParameter(DedupConstants.SOURCE_DIR, String.format("%s/%s", duplication.getSource(), duplication.getPath()));
 			job.addParameter(DedupConstants.OUTPUT_PATH, String.format("%s/%s", "/dedup", duplication.getType()));
 			job.addParameter(DedupConstants.RESULT_PATH, duplication.getSource());
 			
