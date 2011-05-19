@@ -10,6 +10,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.retry.RetryCallback;
+import org.springframework.batch.retry.RetryContext;
 
 import com.nexr.framework.workflow.StepContext;
 import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
@@ -44,7 +46,6 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 		}
 		try {
 			List<String> duplicated = new ArrayList<String>();
-			
 			FileStatus[] types = fs.listStatus(sourcePath);
 			for (FileStatus type : types) {
 				FileStatus[] timegroups = fs.listStatus(new Path(sourcePath, type.getPath().getName()));
@@ -61,12 +62,7 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 						duplicated.add(Duplication.JsonSerializer.serialize(new Duplication(jobType, output, result, String.format("%s/%s", typeName, groupName))));
 						continue;
 					}
-					for (FileStatus file : partials) {
-						LOG.info("Find File {}", file.getPath());
-						Path destfile = new Path(destdir, file.getPath().getName());
-						boolean rename = fs.rename(file.getPath(), destfile);
-						LOG.info("Moving {} to {}. status is {}", new Object[] { file.getPath(), destfile.toString(), rename });
-					}
+					renameTo(partials, destdir);
 				}
 			}
 			if (duplicated.size() > 0) {
@@ -80,5 +76,23 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 			throw new RuntimeException(e);
 		}
 		return String.format("%s-%s", "finishing", jobType);
+	}
+
+	private void renameTo(FileStatus[] files, Path destination) {
+		for (final FileStatus file : files) {
+			LOG.info("Find File {}", file.getPath());
+			final Path destfile = new Path(destination, file.getPath().getName());
+			try {
+				boolean rename = retryTemplate.execute(new RetryCallback<Boolean>() {
+					@Override
+					public Boolean doWithRetry(RetryContext context) throws Exception {
+						return fs.rename(file.getPath(), destfile);
+					}
+				});
+				LOG.info("Moving {} to {}. status is {}", new Object[] { file.getPath(), destfile.toString(), rename });
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
 	}
 }
