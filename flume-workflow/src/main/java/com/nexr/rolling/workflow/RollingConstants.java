@@ -17,4 +17,5 @@ public class RollingConstants {
 	
 	public static final String TODAY_PATH = "today.path";
 	public static final String INPUT_DEPTH = "input.depth";
+	public static final String NOTIFY_ZKPATH_AFTER_ROLLING = "rolling.notify.zk.path";
 }

@@ -7,6 +7,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.retry.RetryCallback;
+import org.springframework.batch.retry.RetryContext;
 
 import com.nexr.framework.workflow.StepContext;
 import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
@@ -21,8 +23,12 @@ import com.nexr.rolling.workflow.ZkClientFactory;
 public class FinishedTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
+	private StepContext.Config config;
+	private ZkClient client = ZkClientFactory.getClient();
+
 	@Override
 	protected String doRun(StepContext context) {
+		config = context.getConfig();
 		String jobType = context.getConfig().get(RollingConstants.JOB_TYPE, null);
 		if ("post".equals(jobType)) {
 			String sourcePath = context.get(RollingConstants.INPUT_PATH, null);
@@ -55,7 +61,39 @@ public class FinishedTasklet extends RetryableDFSTaskletSupport {
 			} else {
 				LOG.info("Rename {} to {}", file.getPath(), destination);
 				fs.rename(file.getPath(), destination);
+				while (!notify(file, destination)) {
+				}
 			}
 		}
+	}
+
+	/**
+	 * 당일로그를 옮기고 주키퍼에 통보하는 역할
+	 * @param file
+	 * @param destination
+	 * @return
+	 */
+	private boolean notify(final FileStatus file, final Path destination) {
+		try {
+			retryTemplate.execute(new RetryCallback<String>() {
+				@Override
+				public String doWithRetry(RetryContext context) throws Exception {
+					String rootPath = config.get(RollingConstants.NOTIFY_ZKPATH_AFTER_ROLLING, "/collector");
+					String type = config.get(RollingConstants.JOB_TYPE, "post");
+					String znode = String.format("%s/%s/%s", rootPath, type, file.getPath().getName());
+					if (!client.exists(znode)) {
+						client.createPersistent(znode, createJSON(destination));
+					}
+					return null;
+				}
+			});
+			return true;
+		} catch (Exception e) {
+		}
+		return false;
+	}
+
+	protected String createJSON(Path destination) {
+		return String.format("[{\"path\":\"%s\"}]", destination.getName());
 	}
 }
