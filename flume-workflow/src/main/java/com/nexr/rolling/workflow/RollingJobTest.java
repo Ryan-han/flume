@@ -6,6 +6,7 @@ import java.util.Date;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.nexr.data.sdp.rolling.mr.HourlyRollingMr;
+import com.nexr.data.sdp.rolling.mr.PostRollingMr;
 import com.nexr.framework.workflow.JobLauncher;
 import com.nexr.rolling.workflow.job.RollingJob;
 
@@ -30,7 +31,7 @@ public class RollingJobTest {
 		job.addParameter(RollingConstants.JOB_TYPE, "post");
 		job.addParameter(RollingConstants.IS_COLLECTOR_SOURCE, "true");
 		job.addParameter(RollingConstants.JOB_CLASS, job.getClass().getName());
-		job.addParameter(RollingConstants.MR_CLASS, HourlyRollingMr.class.getName());
+		job.addParameter(RollingConstants.MR_CLASS, PostRollingMr.class.getName());
 		job.addParameter(RollingConstants.DATETIME, new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date()));
 		job.addParameter(RollingConstants.RAW_PATH, "/nexr/rolling/post/raw");
 		job.addParameter(RollingConstants.INPUT_PATH, "/nexr/rolling/post/input");
