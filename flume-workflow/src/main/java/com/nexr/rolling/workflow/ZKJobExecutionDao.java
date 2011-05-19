@@ -161,7 +161,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		node.put("steps", writeSteps(workflow.getSteps()));
 		node.put("footprints", writeSteps(workflow.getFootprints()));
 		if (LOG.isDebugEnabled()) {
-			LOG.debug("text: {}", node.toString());
+			LOG.debug("text: {}", root.toString());
 		}
 		return root.toString();
 	}
