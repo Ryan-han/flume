@@ -17,11 +17,12 @@ public class RollingJobTest {
 	public static void main(String[] args) {
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:workflow-app.xml");
 		JobLauncher launcher = ctx.getBean(JobLauncher.class);
-		RollingJob job = ctx.getBean(RollingJob.class);
+		ZkClientFactory.getClient().deleteRecursive("/rolling");
+		ZkClientFactory.getClient().deleteRecursive("/dedup");
 		try {
-			launcher.run(createPostRollingJob(job));
-			launcher.run(createHourlyRollingJob(job));
-			launcher.run(createDailyRollingJob(job));
+			launcher.run(createPostRollingJob(ctx.getBean(RollingJob.class)));
+			launcher.run(createHourlyRollingJob(ctx.getBean(RollingJob.class)));
+			launcher.run(createDailyRollingJob(ctx.getBean(RollingJob.class)));
 		} catch (com.nexr.framework.workflow.JobExecutionException e) {
 			e.printStackTrace();
 		}
