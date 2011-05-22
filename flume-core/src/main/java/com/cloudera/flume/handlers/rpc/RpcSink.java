@@ -22,13 +22,10 @@ import org.slf4j.LoggerFactory;
 
 import com.cloudera.flume.conf.Context;
 import com.cloudera.flume.conf.FlumeConfiguration;
-import com.cloudera.flume.conf.LogicalNodeContext;
 import com.cloudera.flume.conf.SinkFactory.SinkBuilder;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.handlers.avro.AvroEventSink;
-import com.cloudera.flume.handlers.cp.TagCheckerTrigger;
 import com.cloudera.flume.handlers.thrift.ThriftEventSink;
-import com.google.common.base.Preconditions;
 
 /**
  * This is a sink that is used to send events through an RPC, it either uses
@@ -48,7 +45,7 @@ public class RpcSink extends EventSink.Base {
       public EventSink build(Context context, String... args) {
         if (args.length > 2) {
           throw new IllegalArgumentException(
-              "usage: rpcSink([hostname, [portno]] {, useCheckpoint=true|false}) ");
+              "usage: rpcSink([hostname, [portno]]) ");
         }
         String host = FlumeConfiguration.get().getCollectorHost();
         int port = FlumeConfiguration.get().getCollectorPort();
@@ -75,12 +72,6 @@ public class RpcSink extends EventSink.Base {
         	LOG.warn("event.rpc.type not defined.  It should be either"
         			+ " \"THRIFT\" or \"AVRO\". Defaulting to Thrift");
         	snk = new ThriftEventSink(host, port);
-        }
-        
-        if(context.getValue(TagCheckerTrigger.USE_CHECKPOINT) != null) {
-        	if("true".equals(context.getValue(TagCheckerTrigger.USE_CHECKPOINT).trim())) {
-  					snk = TagCheckerTrigger.registTagCheckerTrigger(snk, context, host);
-        	}
         }
         return snk;
       }

@@ -31,29 +31,22 @@ import org.apache.thrift.server.TSaneThreadPoolServer;
 import org.codehaus.jettison.json.JSONException;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import com.cloudera.flume.ExampleData;
-import com.cloudera.flume.agent.FlumeNode;
-import com.cloudera.flume.conf.Context;
 import com.cloudera.flume.conf.FlumeBuilder;
 import com.cloudera.flume.conf.FlumeConfiguration;
 import com.cloudera.flume.conf.FlumeSpecException;
-import com.cloudera.flume.conf.LogicalNodeContext;
 import com.cloudera.flume.conf.ReportTestingContext;
 import com.cloudera.flume.core.EventImpl;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.core.EventSource;
 import com.cloudera.flume.core.EventUtil;
-import com.cloudera.flume.handlers.cp.TagCheckerTrigger;
 import com.cloudera.flume.handlers.debug.MemorySinkSource;
 import com.cloudera.flume.handlers.debug.NoNlASCIISynthSource;
 import com.cloudera.flume.reporter.ReportEvent;
 import com.cloudera.flume.reporter.ReportUtil;
 import com.cloudera.flume.reporter.aggregator.CounterSink;
-import com.cloudera.util.BenchmarkHarness;
 import com.cloudera.util.NetUtils;
-import com.nexr.agent.cp.CheckPointManager;
 
 /**
  * Something broke in the performance benchmark so this is just a fast simple
@@ -287,70 +280,5 @@ public class TestThriftSinks implements ExampleData {
     assertNotNull(rpt.getLongMetric(ThriftEventSink.A_SENTBYTES));
     assertNotNull(rpt.getStringMetric(ThriftEventSink.A_SERVERHOST));
     assertNotNull(rpt.getLongMetric(ThriftEventSink.A_SERVERPORT));
-  }
-  
-  @Test
-  public void testCheckpointThrfitOpenAndClose() throws IOException, InterruptedException {
-	  final String NODE_NAME="node1";
-	  final String host = "localhost";
-	  
-	  Context ctx = new CPContext(NODE_NAME, NODE_NAME);
-	  
-	  CheckPointManager cpManager = Mockito.mock(CheckPointManager.class);
-	  BenchmarkHarness.setupFlumeNode(null, null, null, null, null, cpManager);
-	  
-	  ThriftEventSource tes = null;
-	  try {
-		  tes = new ThriftEventSource(54321);
-		  tes.open();
-		  EventSink snk = ThriftEventSink.builder().build(ctx, host, "54321");
-		  snk.open();
-		  Mockito.verify(cpManager).startTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL), host, FlumeConfiguration.get().getCheckPointPort());
-		  snk.close();
-		  Mockito.verify(cpManager).stopTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL));
-	  } finally {
-		  if (tes != null) {
-			  tes.close();
-		  }
-	  }
-  }
-  
-  class CPContext extends LogicalNodeContext {
-  	public CPContext(String pName, String lName) {
-  		super(pName, lName);
-  		putValue(TagCheckerTrigger.USE_CHECKPOINT, "true");
-  	}
-  }
-
-  /**
-   * Checkpoint mode가 아닌 ThriftSink는 TagChecker의  start/stop이 호출 되면 안된다. 
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testThrfitOpenAndClose() throws IOException, InterruptedException {
-	  final int cpPort = 9999;
-	  final String host = "localhost";
-	  
-	  Context ctx = LogicalNodeContext.testingContext();
-	  
-	  CheckPointManager cpManager = Mockito.mock(CheckPointManager.class);
-	  BenchmarkHarness.setupFlumeNode(null, null, null, null, null, cpManager);
-	  
-	  ThriftEventSource tes = null;
-	  try {
-		  tes = new ThriftEventSource(54321);
-		  tes.open();
-		  
-		  EventSink snk = ThriftEventSink.builder().build(ctx, host, "54321");
-		  snk.open();
-		  Mockito.verify(cpManager, Mockito.never()).startTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL), host, cpPort);
-		  snk.close();
-		  Mockito.verify(cpManager, Mockito.never()).stopTagChecker(ctx.getValue(LogicalNodeContext.C_LOGICAL));
-	  } finally {
-		  if (tes != null) {
-			  tes.close();
-		  }
-	  }
   }
 }

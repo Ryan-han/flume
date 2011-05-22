@@ -1,40 +1,21 @@
 package com.nexr.agent.cp;
 
-import java.util.List;
+import java.io.IOException;
 import java.util.Map;
 
-public interface CheckPointManager {
+import com.cloudera.flume.agent.durability.WALCompletionNotifier;
+import com.cloudera.flume.handlers.endtoend.AckListener;
 
-	public String getTagId(String agentName, String filename);
-
-	public void startClient();
+public interface CheckPointManager extends WALCompletionNotifier{
 	
-	public void stopClient();
-
-	/**
-	 * 
-	 * @param tagId
-	 * @param tagContent
-	 *            : key:fileName, value:lastOffset
-	 */
-	public void addPendingQ(String tagId, String logicalNodeName, Map<String, Long> tagContent);
-
-	public Map<String, Long> getOffset(String logicalNodeName);
-
-	public void setCollectorHost(String host);
-
-	public void startTagChecker(String agentName, String collectorHost, int collectorPort);
+	public void setPendingQ(AckListener agentAckQueuer);
 	
-	public void stopTagChecker(String agentName);
+	public void addPendingQ(String tagId, Map<String, Long> fileOffsets) throws IOException;
 	
-	//for Collector
-	public void startServer(int port);
+	public Map<String, Long> getCheckpoint();
 	
-	public void startServer();
+	public void start();
 	
-	public void stopServer();
-	
-	public void addCollectorCompleteList(List<String> tagIds);
+	public void stop();
 
-	public boolean getTagList(String tagId);
 }

@@ -262,67 +262,38 @@ public class TestCollectorSink {
 	 Map<String, Map<String, Long>> pending = new HashMap<String, Map<String, Long>>();
 	 List<String> collect_pending = new ArrayList<String>();
 
-	@Override
-	public String getTagId(String agentName, String filename) {
-		return null;
-	}
-	
-	@Override
-	public void stopClient() {
-	}
+		@Override
+		public void toAcked(String tag) throws IOException {
+		}
 
-	@Override
-	public Map<String, Long> getOffset(String logicalNodeName) {
-		return null;
-	}
+		@Override
+		public void retry(String tag) throws IOException {
+		}
 
-	@Override
-	public void setCollectorHost(String host) {
-	}
-	
-	@Override
-	public void startServer() {
-	}
+		@Override
+		public void setPendingQ(AckListener agentAckQueuer) {
+		}
 
-	@Override
-	public void addPendingQ(String tagId, String logicalNodeName,
-			Map<String, Long> tagContent) {
-		pending.put(tagId, tagContent);
-	}
+		@Override
+		public void addPendingQ(String tagId, Map<String, Long> fileOffsets) throws IOException {
+			pending.put(tagId, fileOffsets);
+		}
 
-	@Override
-	public void addCollectorCompleteList(List<String> tagIds) {
-		collect_pending.addAll(tagIds);
-	}
+		@Override
+		public Map<String, Long> getCheckpoint() {
+			return null;
+		}
 
-	@Override
-	public boolean getTagList(String tagId) {
-		return false;
-	}
+		@Override
+		public void start() {
+		}			
 
-	@Override
-	public void startClient() {
-	}
-
-	@Override
-	public void startTagChecker(String agentName, String collectorHost,
-			int collectorPort) {
-	}
-
-	@Override
-	public void stopTagChecker(String agentName) {
-	}
-
-	@Override
-	public void stopServer() {
-	}
-
-	@Override
-	public void startServer(int port) {
-	}
+		@Override
+		public void stop() {
+		}
   }
 
-  /**
+	  /**
    * Construct a sink that will process the acked stream.
    * 
    * @throws IOException
@@ -798,31 +769,6 @@ public class TestCollectorSink {
     assertEquals(1, (long) rpta.getLongMetric("foo"));
     ReportEvent rptb = ReportManager.get().getReportable("bar").getMetrics();
     assertEquals(1, (long) rptb.getLongMetric("bar"));
-  }
-  
-  @Test
-  public void testCheckpointServerOpenClose() throws IOException, FlumeSpecException, InterruptedException {
-	  CheckPointManager cpManager = mock(CheckPointManager.class);
-	  BenchmarkHarness.setupFlumeNode(null, null, null, null, null, cpManager);
-	  
-	  File tmpdir = null;
-	  try {
-		  tmpdir = FileUtil.mktempdir();
-		  String snkspec = "checkpointCollectorSink(\"file:///" + tmpdir.getAbsolutePath()
-		  + "\",\"\""
-		  + ", 15000, 5959"
-		  + ")";
-		  CollectorSink snk = (CollectorSink) FlumeBuilder.buildSink(new Context(), snkspec);
-		  snk.open();
-		  Mockito.verify(cpManager).startServer(5959);
-		  snk.close();
-		  Mockito.verify(cpManager).stopServer();
-	  } finally {
-		  if(tmpdir != null) {
-			  FileUtil.rmr(tmpdir);
-		  }
-		  BenchmarkHarness.cleanupLocalWriteDir();
-	  }
   }
   
   @Test

@@ -129,10 +129,10 @@ public class TailDirSource extends EventSource.Base {
    */
   protected void initCheckPoint(String logicalNodeName) {
 	  if(checkPointManager == null) {
-		  this.checkPointOffsetMap =  FlumeNode.getInstance().getCheckPointManager().getOffset(logicalNodeName);
+	  	this.checkPointOffsetMap = FlumeNode.getInstance().getAddCheckpointManager(logicalNodeName).getCheckpoint();
 	  } else {
-		  this.checkPointOffsetMap = checkPointManager.getOffset(logicalNodeName);
-	  }
+		  this.checkPointOffsetMap = checkPointManager.getCheckpoint();
+		 }
 	  this.useCheckpoint = true;
   }
   

@@ -19,6 +19,8 @@
 package com.cloudera.flume.agent;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -36,24 +38,33 @@ import com.cloudera.flume.agent.durability.WALManager;
  */
 public class FlumeNodeWALNotifier implements WALCompletionNotifier {
   public static final Logger LOG = LoggerFactory.getLogger(FlumeNodeWALNotifier.class);
-  final Map<String, WALManager> node;
-
+//  Map<String, WALManager> node;
+  
+  final List<Map<String, ? extends WALCompletionNotifier>> nodeList;
+  
   /**
    * Pick an arbitrary node.
    */
-  public FlumeNodeWALNotifier(Map<String, WALManager> node) {
-    this.node = node;
+  public FlumeNodeWALNotifier(Map<String, WALCompletionNotifier> node) {
+  	this.nodeList = new ArrayList<Map<String, ? extends WALCompletionNotifier>>();
+  	nodeList.add(node);
   }
-
+  
+  public FlumeNodeWALNotifier(List<Map<String, ? extends WALCompletionNotifier>> nodeList) {
+  	this.nodeList = nodeList;
+  }
+  
   /**
    * This takes a tag and attempts to retry each in each wal.
    * */
   @Override
   public void retry(String tag) throws IOException {
-    Map<String, WALManager> mp = node;
-    for (WALManager wm : mp.values()) {
-      wm.retry(tag);
-    }
+  	for(Map<String, ? extends WALCompletionNotifier> node : nodeList) {
+  		Map<String, ? extends WALCompletionNotifier> mp = node;
+  		for (WALCompletionNotifier wm : mp.values()) {
+  			wm.retry(tag);
+  		}
+  	}
   }
 
   /**
@@ -62,32 +73,34 @@ public class FlumeNodeWALNotifier implements WALCompletionNotifier {
    * */
   @Override
   public void toAcked(String tag) throws IOException {
-    Map<String, WALManager> mp = node;
-    int success = 0;
-
-    for (WALManager wm : mp.values()) {
-      try {
-        wm.toAcked(tag);
-        success++;
-      } catch (Exception ioe) {
-        // We are being lax here -- we will fail on each logical node except for
-        // the proper one. Thus this must catch IOExceptions and
-        // IllegalState/IllegalArgument Exceptions
-
-        // eat it.
-        LOG.debug(ioe.getMessage(), ioe);
-      }
-    }
-
-    if (success == 0) {
-      // this is an odd situation
-      LOG.warn("No wal managers contained tag " + tag);
-    }
-
-    if (success > 1) {
-      // this is weird too
-      LOG.warn("Expected exactly one wal manager to contain tag " + tag
-          + " but " + success + "did!");
-    }
+  	for(Map<String, ? extends WALCompletionNotifier> node : nodeList) {
+  		Map<String, ? extends WALCompletionNotifier> mp = node;
+  		int success = 0;
+  		
+  		for (WALCompletionNotifier wm : mp.values()) {
+  			try {
+  				wm.toAcked(tag);
+  				success++;
+  			} catch (Exception ioe) {
+  				// We are being lax here -- we will fail on each logical node except for
+  				// the proper one. Thus this must catch IOExceptions and
+  				// IllegalState/IllegalArgument Exceptions
+  				
+  				// eat it.
+  				LOG.debug(ioe.getMessage(), ioe);
+  			}
+  		}
+  		
+  		if (success == 0) {
+  			// this is an odd situation
+  			LOG.warn("No wal managers contained tag " + tag);
+  		}
+  		
+  		if (success > 1) {
+  			// this is weird too
+  			LOG.warn("Expected exactly one wal manager to contain tag " + tag
+  					+ " but " + success + "did!");
+  		}
+  	}
   }
 }

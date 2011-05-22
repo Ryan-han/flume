@@ -21,7 +21,9 @@ package com.cloudera.flume.agent;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
@@ -41,6 +43,7 @@ import com.cloudera.flume.VersionInfo;
 import com.cloudera.flume.agent.diskfailover.DiskFailoverManager;
 import com.cloudera.flume.agent.diskfailover.NaiveFileFailoverManager;
 import com.cloudera.flume.agent.durability.NaiveFileWALManager;
+import com.cloudera.flume.agent.durability.WALCompletionNotifier;
 import com.cloudera.flume.agent.durability.WALManager;
 import com.cloudera.flume.conf.Context;
 import com.cloudera.flume.conf.FlumeBuilder;
@@ -66,8 +69,6 @@ import com.cloudera.util.Pair;
 import com.google.common.base.Preconditions;
 import com.nexr.agent.cp.CheckPointManager;
 import com.nexr.agent.cp.CheckPointManagerImpl;
-import com.sun.jersey.api.core.DefaultResourceConfig;
-import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
  * This is a configurable flume node.
@@ -109,6 +110,8 @@ public class FlumeNode implements Reportable {
    * (String) logical node name -> WALManager
    */
   private Map<String, WALManager> walMans = new HashMap<String, WALManager>();
+  
+  private Map<String, CheckPointManager> ckMans = new HashMap<String, CheckPointManager>();
 
   /**
    * (String) logical node name -> DiskFailoverManager
@@ -121,7 +124,6 @@ public class FlumeNode implements Reportable {
 
   private final ChokeManager chokeMan;
 
-  private CheckPointManager checkPointManager;
   /**
    * A FlumeNode constructor with pluggable xxxManagers. This is used for
    * debugging and test cases. The http server is assumed not to be started, and
@@ -138,6 +140,7 @@ public class FlumeNode implements Reportable {
     this.nodesMan = nodesMan;
     this.walMans.put(getPhysicalNodeName(), walMan);
     this.failoverMans.put(getPhysicalNodeName(), dfMan);
+    this.ckMans.put(getPhysicalNodeName(), cpManager);
     this.collectorAck = colAck;
     this.liveMan = liveman;
     // As this is only for the testing puposes, just initialize the physical
@@ -150,7 +153,6 @@ public class FlumeNode implements Reportable {
         simpleReportManager, rpcMan);
     this.sysInfo = new SystemInfo(PHYSICAL_NODE_REPORT_PREFIX
         + this.physicalNodeName + ".");
-    this.checkPointManager = cpManager;
   }
 
   public FlumeNode(FlumeConfiguration conf, String nodeName, MasterRPC rpc,
@@ -166,12 +168,18 @@ public class FlumeNode implements Reportable {
     this.walMans.put(getPhysicalNodeName(), walMan);
     this.failoverMans.put(getPhysicalNodeName(), new NaiveFileFailoverManager(
         defaultDir));
+    CheckPointManager ckMan = new CheckPointManagerImpl(getPhysicalNodeName(), conf.getCheckPointBaseDir()); //TODO 디폴트로 넣어줘야 하나?
+    this.ckMans.put(getPhysicalNodeName(), ckMan);
 
     // no need for liveness tracker if a one shot execution.
     this.collectorAck = new CollectorAckListener(rpcMan);
     if (!oneshot) {
+    	List<Map<String, ? extends WALCompletionNotifier>> nodeList 
+    		= new ArrayList<Map<String, ? extends WALCompletionNotifier>>();
+    	nodeList.add(this.walMans);
+    	nodeList.add(this.ckMans);
       this.liveMan = new LivenessManager(nodesMan, rpcMan,
-          new FlumeNodeWALNotifier(this.walMans));
+          new FlumeNodeWALNotifier(nodeList));
       this.reportPusher = new MasterReportPusher(conf, simpleReportManager,
           rpcMan);
 
@@ -187,9 +195,6 @@ public class FlumeNode implements Reportable {
         + this.getPhysicalNodeName() + ".");
     this.sysInfo = new SystemInfo(PHYSICAL_NODE_REPORT_PREFIX
         + this.getPhysicalNodeName() + ".");
-    
-    this.checkPointManager = new CheckPointManagerImpl();
-
   }
 
   public FlumeNode(MasterRPC rpc, boolean startHttp, boolean oneshot) {
@@ -317,6 +322,12 @@ public class FlumeNode implements Reportable {
 
     if (chokeMan != null) {
       chokeMan.halt();
+    }
+    
+    if (ckMans != null)  {
+    	for(CheckPointManager man : ckMans.values()) {
+    		man.stop();
+    	}
     }
 
   }
@@ -670,6 +681,43 @@ public class FlumeNode implements Reportable {
       System.exit(-1);
     }
   }
+  
+  public CheckPointManager getCheckpointManager() {
+  	synchronized (ckMans) {
+			return ckMans.get(getPhysicalNodeName());
+		}
+  }
+  
+  public CheckPointManager getCheckpointManager(String ckNode) {
+  	synchronized (ckMans) {
+  		if(ckNode == null) {
+  			return getCheckpointManager();
+  		} else {
+  			return ckMans.get(ckNode);
+  		}
+		}
+  }
+  
+  public CheckPointManager addCheckpointManager(String ckNode) {
+  	Preconditions.checkArgument(ckNode != null);
+  	FlumeConfiguration conf = FlumeConfiguration.get();
+  	
+  	CheckPointManager ckManager = new CheckPointManagerImpl(ckNode, conf.getCheckPointBaseDir());
+  	synchronized (ckMans) {
+  		ckMans.put(ckNode, ckManager);
+  		return ckManager;
+  	}
+  }
+  
+  public CheckPointManager getAddCheckpointManager(String ckNode) {
+  	synchronized (ckMans) {
+  		CheckPointManager ckMan = getCheckpointManager(ckNode);
+  		if(ckMan == null) {
+  			ckMan = addCheckpointManager(ckNode);
+  		}
+  		return ckMan;
+		}
+  }
 
   public WALManager getWalManager() {
     // default to physical node's wal manager
@@ -820,9 +868,5 @@ public class FlumeNode implements Reportable {
 
   public FlumeVMInfo getVMInfo() {
     return vmInfo;
-  }
-
-  public CheckPointManager getCheckPointManager() {
-	return checkPointManager;
   }
 }

@@ -64,8 +64,12 @@ public class AgentSink extends EventSink.Base {
   };
 
   final EventSink sink;
-
-  public AgentSink(Context ctx, String dsthost, int port, ReliabilityMode mode)
+  
+  public AgentSink(Context ctx, String dsthost, int port, ReliabilityMode mode) throws FlumeSpecException {
+  	this(ctx, dsthost, port, mode, 0);
+  }
+  
+  public AgentSink(Context ctx, String dsthost, int port, ReliabilityMode mode, int batch)
       throws FlumeSpecException {
     Preconditions.checkNotNull(dsthost);
 
@@ -103,8 +107,14 @@ public class AgentSink extends EventSink.Base {
     }
     
     case CHECKPOINT: {
-    	String snk = String.format("{ checkpointDeco => { stubbornAppend => " 
-    			+ "{ insistentOpen => checkpointRpcSink(\"%s\", %d)} } }" , dsthost, port);
+    	String snk = null;
+    	if(batch > 0) {
+    		snk = String.format("{ checkpointInjector => { batch(%s) => { stubbornAppend => " 
+      			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } } }", batch, dsthost, port);
+    	} else {
+    		snk = String.format("{ checkpointInjector => { stubbornAppend => " 
+      			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } }" , dsthost, port);
+    	}
     	sink = FlumeBuilder.buildSink(ctx, snk);
     	break;
     }
@@ -173,11 +183,13 @@ public class AgentSink extends EventSink.Base {
 
 		@Override
 		public EventSink build(Context context, String... argv) {
-			Preconditions.checkArgument(argv.length <= 2,
-					"usage: agentCheckpointSink[macMillis]");
+			Preconditions.checkArgument(argv.length <= 3,
+					"usage: agentCheckpointSink(collectorHost, collectorPort[, 100])");
 	        FlumeConfiguration conf = FlumeConfiguration.get();
 	        String collector = conf.getCollectorHost();
 	        int port = conf.getCollectorPort();
+	        int batch = 0;
+	        
 	        if (argv.length >= 1) {
 	          collector = argv[0];
 	        }
@@ -186,9 +198,13 @@ public class AgentSink extends EventSink.Base {
 	          port = Integer.parseInt(argv[1]);
 	        }
 	        
+	        if (argv.length >=3) {
+	        	batch = Integer.parseInt(argv[2]);
+	        }
+	        
 	        try {
 	        	return new AgentSink(context, collector, port,
-	        			ReliabilityMode.CHECKPOINT);
+	        			ReliabilityMode.CHECKPOINT, batch);
 	        } catch (FlumeSpecException e) {
 	        	LOG.error("AgentSink spec error " + e, e);
 	        	throw new IllegalArgumentException();
