@@ -122,24 +122,16 @@ public class TestAgentSink {
   
   @Test
   public void testCheckpointBuilder() throws FlumeSpecException {
-	  String snk = "agentCheckpointSink";
-	  FlumeBuilder.buildSink(new Context(), snk);
-	  
-	  String snk2 = "agentCheckpointSink(\"localhost\")";
-	  FlumeBuilder.buildSink(new Context(), snk2);
-	  
-	  String snk3 = "agentCheckpointSink(\"localhost\", 12345)";
-	  FlumeBuilder.buildSink(new Context(), snk3);
-	  
-	  try {
-		  String snk4 = "agentCheckpointSink(\"localhost\", 12345, \"fail\")";
-		  FlumeBuilder.buildSink(new Context(), snk4);
-	  } catch (Exception e) {
-		  return;
-	  }
-	  Assert.fail("unexpected fall through");
+//  	snk = String.format("{ checkpointInjector => { batch(%s) => { stubbornAppend => " 
+//  			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } } }", batch, dsthost, port);
+//  	String snk = " agentCPSink(\"localhost\", 12345)";
+//		FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk);
+		
+		String snk1 = "agentCPSink(\"localhost\", 12345, 100)";
+		EventSink s = FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk1);
+		System.out.println("");
   }
-
+  
   /**
    * This test makes sure that opening and closing in rapid succession does not
    * cause an exception due to resource contention (ports) or race conditions.

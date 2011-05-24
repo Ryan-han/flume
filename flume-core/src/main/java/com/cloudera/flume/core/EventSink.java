@@ -18,6 +18,7 @@
 package com.cloudera.flume.core;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import com.cloudera.flume.conf.Context;
@@ -68,6 +69,7 @@ public interface EventSink extends Reportable {
    * about the particular sink, and does not hierarchically gather information
    * from subsinks.
    */
+
   @Deprecated
   public ReportEvent getReport();
 
@@ -94,6 +96,8 @@ public interface EventSink extends Reportable {
     /** total number bytes appended to this sink */
     private long numBytes = 0;
 
+    private List<EventSinkListener> listeners;
+    
     /**
      * {@inheritDoc}
      */
@@ -115,6 +119,11 @@ public interface EventSink extends Reportable {
      */
     @Override
     public void close() throws IOException, InterruptedException {
+    	if(listeners != null) {
+    		for(EventSinkListener l : listeners) {
+    			l.close();
+    		}
+    	}
     }
 
     /**
@@ -122,9 +131,14 @@ public interface EventSink extends Reportable {
      */
     @Override
     public void open() throws IOException, InterruptedException {
+    	if(listeners != null) {
+    		for(EventSinkListener l : listeners) {
+    			l.open();
+    		}
+    	}
     }
-
-    /**
+    
+	/**
      * {@inheritDoc}
      */
     @Override
