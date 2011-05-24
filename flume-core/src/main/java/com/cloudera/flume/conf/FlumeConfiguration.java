@@ -263,8 +263,7 @@ public class FlumeConfiguration extends Configuration {
   
   // for CheckPoint
   public static final String CHECKPOINT_FILE_PATH = "checkpoint.file.path";
-  public static final String CHECKPOINT_PORT = "checkpoint.port";
-  public static final String CHECKPOINT_TIMEOUT = "checkpoint.timeout";
+  public static final String CHECKPOINT_ROLL_PERIOD = "flume.agnet.checkpoint.rollperiod";
 
   // Web app options
   public static final String WEBAPP_ROOT_NODE = "flume.node.webapp.root";
@@ -1059,18 +1058,11 @@ public class FlumeConfiguration extends Configuration {
     return getLong(NODE_CLOSE_TIMEOUT, 30000);
   }
   
-  public String getCheckPointFile() {
-	    return get(CHECKPOINT_FILE_PATH, "D:\\data");
+  public String getCheckPointBaseDir() {
+  	return get(CHECKPOINT_FILE_PATH, "/tmp/checkpoint/");
   }
   
-  public int getCheckPointPort() {
-	    return getInt(CHECKPOINT_PORT, 13421);
+  public int getCheckpointRollPeriod() {
+  	return getInt(CHECKPOINT_ROLL_PERIOD, 250);
   }
-  
-  public long getCheckPointTimeout() {
-	    return getLong(CHECKPOINT_TIMEOUT, 10000); //60000
-  }
-
-  
-	  
 }

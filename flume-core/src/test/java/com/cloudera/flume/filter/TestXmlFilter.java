@@ -3,6 +3,7 @@ package com.cloudera.flume.filter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 import junit.framework.Assert;
 
@@ -12,12 +13,13 @@ import com.cloudera.flume.collector.MemorySink;
 import com.cloudera.flume.core.Event;
 import com.cloudera.flume.core.EventImpl;
 import com.cloudera.flume.handlers.filter.XmlFilter;
+import com.cloudera.flume.handlers.text.TailSource;
 
 public class TestXmlFilter {
 	@Test
 	public void testParsing() throws IOException, InterruptedException {
 		MemorySink s = new MemorySink("memorySink");
-		XmlFilter xmlFilter = new XmlFilter(s);
+		XmlFilter xmlFilter = new XmlFilter(s, "logicalNodeName");
 
 		String bodyStr = "<TransactionLog>"
 				+ "<SystemHeader>"
@@ -49,6 +51,7 @@ public class TestXmlFilter {
 		byte[] body = bodyStr.getBytes();
 
 		Event e = new EventImpl(body);
+		e.set(TailSource.A_TAILSRCFILE, "testfile".getBytes());
 
 		xmlFilter.open();
 		xmlFilter.append(e);
@@ -77,5 +80,13 @@ public class TestXmlFilter {
 		Assert.assertNull(attrMap.get("Body.ResultCode"));
 		Assert.assertNull(attrMap.get("Body.ResultDescription"));
 		Assert.assertTrue(Arrays.equals("ADDRESS_IN_REQ=SEOUL|!|NAME_IN_REQ=SUNG-KEUN".getBytes(), attrMap.get("Body.PayLoad")));
+		
+		CRC32 crc = new CRC32();
+		crc.reset();
+		crc.update(e.getBody());
+		String logId = "logicalNodeNametestfile"+crc.getValue();
+		System.out.println(new String(logId.getBytes()));
+		System.out.println(new String(attrMap.get(XmlFilter.LOG_ID)));
+		Assert.assertTrue(Arrays.equals(logId.getBytes(), attrMap.get(XmlFilter.LOG_ID)));
 	}
 }

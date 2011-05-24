@@ -22,11 +22,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +55,6 @@ import com.cloudera.util.BackoffPolicy;
 import com.cloudera.util.CumulativeCappedExponentialBackoff;
 import com.google.common.base.Preconditions;
 import com.nexr.agent.cp.CheckPointManager;
-import com.nexr.agent.cp.CheckpointChecker;
 
 /**
  * This collector sink is the high level specification a user would use. The
@@ -69,7 +68,6 @@ public class CollectorSink extends EventSink.Base {
 
   final EventSink snk;
   AckAccumulator accum = new AckAccumulator();
-  CheckpointAccumulator cpAccum = new CheckpointAccumulator();
   final AckListener ackDest;
   final String snkSpec;
   
@@ -79,29 +77,18 @@ public class CollectorSink extends EventSink.Base {
   // hdfs sink is closed/flushed
   Set<String> rollAckSet = new HashSet<String>();
   
-  Set<String> rollCheckpointSet = new HashSet<String>();
-  
-  boolean useCheckpoint;
-
   // References package exposed for testing
   final RollSink roller;
 
   CollectorSink(Context ctx, String snkSpec, long millis, AckListener ackDest)
       throws FlumeSpecException {
-    this(ctx, snkSpec, millis, new ProcessTagger(), 250, ackDest, false, FlumeConfiguration.get().getCheckPointPort());
+    this(ctx, snkSpec, millis, new ProcessTagger(), 250, ackDest);
   }
   
-  CollectorSink(Context ctx, String snkSpec, long millis, AckListener ackDest, boolean useCheckpoint, int checkpointPort)
-  	throws FlumeSpecException {
-	  this(ctx, snkSpec, millis, new ProcessTagger(), 250, ackDest, useCheckpoint, checkpointPort);
-  }
-
   CollectorSink(Context ctx, final String snkSpec, final long millis,
-      final Tagger tagger, long checkmillis, AckListener ackDest, boolean useCheckpoint
-      ,int checkpointPort) {
+      final Tagger tagger, long checkmillis, AckListener ackDest) {
     this.ackDest = ackDest;
     this.snkSpec = snkSpec;
-    this.useCheckpoint = useCheckpoint;
     roller = new RollSink(ctx, snkSpec, new TimeTrigger(tagger, millis),
         checkmillis) {
       // this is wraps the normal roll sink with an extra roll detection
@@ -146,14 +133,7 @@ public class CollectorSink extends EventSink.Base {
     tmp = new StubbornAppendSink<EventSink>(tmp);
     tmp = new InsistentAppendDecorator<EventSink>(tmp, backoff2);
     
-    if(useCheckpoint) {
-    	setCheckpointManager(FlumeNode.getInstance().getCheckPointManager());
-    	snk = new CheckpointChecker<EventSink>(tmp, cpAccum, checkpointPort);
-    } else {
-    	//TODO 둘다 boolean 으로 실행을 해야 하지 않나? 
-    	//DiskFailover일 때는 CollectorSink를 쓰지 않나?
-    	snk = new AckChecksumChecker<EventSink>(tmp, accum);
-    }
+    snk = new AckChecksumChecker<EventSink>(tmp, accum);
   }
 
   /**
@@ -164,22 +144,7 @@ public class CollectorSink extends EventSink.Base {
       throws FlumeSpecException {
     this(ctx, "escapedCustomDfs(\"" + StringEscapeUtils.escapeJava(path)
         + "\",\"" + StringEscapeUtils.escapeJava(filename) + "%{rolltag}"
-        + "\" )", millis, tagger, checkmillis, ackDest, false, FlumeConfiguration.get().getCheckPointPort());
-  }
-  
-  /**
-   * This is a compatibility mode for older version of the tests
-   */
-  CollectorSink(Context ctx, String path, String filename, long millis,
-      final Tagger tagger, long checkmillis, AckListener ackDest, boolean useCheckpoint, int checkpointPort)
-      throws FlumeSpecException {
-    this(ctx, "escapedCustomDfs(\"" + StringEscapeUtils.escapeJava(path)
-        + "\",\"" + StringEscapeUtils.escapeJava(filename) + "%{rolltag}"
-        + "\" )", millis, tagger, checkmillis, ackDest, useCheckpoint, checkpointPort);
-  }
-  
-  public void setCheckpointManager(CheckPointManager cpManager) {
-	  this.cpManager = cpManager;
+        + "\" )", millis, tagger, checkmillis, ackDest);
   }
 
   String curRollTag;
@@ -211,9 +176,6 @@ public class CollectorSink extends EventSink.Base {
       LOG.debug("closing roll detect deco {}", tag);
       super.close();
       flushRollAcks();
-      if(useCheckpoint) {
-    	  flushCheckpointRollAcks();
-      }
       LOG.debug("closed  roll detect deco {}", tag);
     }
 
@@ -229,16 +191,6 @@ public class CollectorSink extends EventSink.Base {
       for (String at : acktags) {
         master.end(at);
       }
-    }
-    
-    void flushCheckpointRollAcks() {
-    	List<String> acktags;
-    	synchronized (rollCheckpointSet) {
-    		acktags = new ArrayList<String>(rollCheckpointSet);
-			rollCheckpointSet.clear();
-			LOG.debug("Roll closed, pushing checkpoint acks for " + tag + " :: " + acktags);
-		}
-    	cpManager.addCollectorCompleteList(acktags);
     }
   };
 
@@ -271,18 +223,6 @@ public class CollectorSink extends EventSink.Base {
 
   };
   
-  class CheckpointAccumulator extends AckListener.Empty {
-
-	@Override
-	public void end(String group) throws IOException {
-		synchronized (rollCheckpointSet) {
-			LOG.debug("Adding to checkPointAcktag {} to rolltag {}", group, curRollTag);
-			rollCheckpointSet.add(group);
-	        LOG.debug("Current rolltag checkPointAcktag mapping: {}", rollAckSet);
-		}
-	}
-  }
-
   @Override
   public void append(Event e) throws IOException, InterruptedException {
     snk.append(e);
@@ -384,42 +324,38 @@ public class CollectorSink extends EventSink.Base {
       }
     };
   }
-  
-  public static SinkBuilder checkpointHdfsBuilder() {
-	  return new SinkBuilder() {
-		@Override
-		public EventSink build(Context context, String... argv) {
-			Preconditions.checkArgument(argv.length <= 4 && argv.length >= 2,
-	            "usage: checkpointCollectorSink[(dfsdir,path, [,rollmillis, [checkpointPort]])]");
-			String logdir = FlumeConfiguration.get().getCollectorDfsDir(); // default
-	        long millis = FlumeConfiguration.get().getCollectorRollMillis();
-	        int checkpointPort = FlumeConfiguration.get().getCheckPointPort();
-	        String prefix = "";
-	        if (argv.length >= 1) {
-	          logdir = argv[0]; // override
-	        }
-	        if (argv.length >= 2) {
-	          prefix = argv[1];
-	        }
-	        if (argv.length >= 3) {
-	          millis = Long.parseLong(argv[2]);
-	        }
-	        if (argv.length >= 4) {
-	        	checkpointPort = Integer.parseInt(argv[3]);
-	        }
-	        EventSink snk;
-			try {
-				snk = new CollectorSink(context, logdir, prefix, millis,
-				        new ProcessTagger(), 250, FlumeNode.getInstance()
-				            .getCollectorAckListener(), true, checkpointPort);
-				return snk;
-			} catch (FlumeSpecException e) {
-		          LOG.error("CollectorSink spec error " + e, e);
-		          throw new IllegalArgumentException(
-		              "usage: collectorSink[(dfsdir,path[,rollmillis])]" + e);
+		
+	public static SinkBuilder sdpBuilder() {
+		return new SinkBuilder() {
+			@Override
+			public EventSink build(Context context, String... argv) {
+				Preconditions.checkArgument(argv.length <= 3 && argv.length >= 2,
+        "usage: sdpSink[(dfsdir,prefix[,rollmillis])]");
+		    
+				String logdir = FlumeConfiguration.get().getCollectorDfsDir(); // default
+		    long millis = FlumeConfiguration.get().getCollectorRollMillis();
+		    String prefix = "";
+		    if (argv.length >= 1) {
+		      logdir = argv[0]; // override
+		    }
+		    if (argv.length >= 2) {
+		      prefix = argv[1];
+		    }
+		    if (argv.length >= 3) {
+		      millis = Long.parseLong(argv[2]);
+		    }
+		    
+	    	final String snkSpec = "dfs(\"" + StringEscapeUtils.escapeJava(logdir)
+	    		+ Path.SEPARATOR + StringEscapeUtils.escapeJava(prefix) + "%{rolltag}"
+	    		+ "\" ,keyClassName=\"com.nexr.data.sdp.rolling.hdfs.LogRecordKey\" " 
+	    		+ ",valueClassName=\"com.nexr.data.sdp.rolling.hdfs.LogRecord\" " 
+	    		+ ",rename=true)";
+	    	
+	    	EventSink snk = new CollectorSink(context, snkSpec, millis,
+	    			new ProcessTagger(), 250, FlumeNode.getInstance()
+            .getCollectorAckListener());
+	      return snk;
 			}
-		}
-		  
-	  };
-  }
+		};
+	}
 }

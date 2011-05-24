@@ -6,644 +6,273 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 
-import javax.print.DocFlavor.STRING;
-
-import org.apache.thrift.TException;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.server.TNonblockingServer;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.transport.TFramedTransport;
-import org.apache.thrift.transport.TNonblockingServerSocket;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
-import org.mortbay.log.Log;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import com.cloudera.flume.agent.FlumeNode;
+import com.cloudera.flume.agent.LogicalNode;
 import com.cloudera.flume.conf.FlumeConfiguration;
-import com.cloudera.util.Clock;
-import com.nexr.collector.cp.CheckPointHandler;
-import com.nexr.cp.thrift.CheckPointService;
+import com.cloudera.flume.conf.FlumeSpecException;
+import com.cloudera.flume.handlers.endtoend.AckListener;
+import com.google.common.base.Preconditions;
 
 public class CheckPointManagerImpl implements CheckPointManager {
-	static final Logger log = LoggerFactory
-			.getLogger(CheckPointManagerImpl.class);
-
-	private final static String DATE_FORMAT = "yyyyMMdd-HHmmssSSSZ";
+	static final Log log = LogFactory.getLog(CheckPointManagerImpl.class);
+	
 	private final String SEPERATOR = "\t";
 	private final String LINE_SEPERATOR = "\n";
+	static final String CKPOINT_SUFFIX = ".checkpoint";
 
-	private String checkPointFilePath;
+	private String baseDir;
+	private String logicalNodeName;
+	private Map<String, Long> fileOffsets;
+	private AckListener listener;
+	
+	private CheckpointThread t;
+	
+	public CheckPointManagerImpl(String logicalNodeName, String baseDir) {
+		this.logicalNodeName = logicalNodeName;
+		this.baseDir = baseDir;
+		this.fileOffsets = new HashMap<String, Long>();
 
-	private Map<String, TTransport> agentTransportMap; // agent-collector
-														// TTransport
-														// mappingInfo
-	private Map<String, CheckPointService.Client> agentClientMap; // agent-collector
-																	// Client
-																	// mappingInfo
-	private Map<String, CollectorInfo> agentCollectorInfo;
-
-	private Map<String, List<PendingQueueModel>> agentTagMap; // agent,
-																// list<PendingQueueModel>
-	private Map<String, List<WaitingQueueModel>> waitedTagList; // agent,
-	// WatingQueueModel
-
-	private Object sync = new Object();
-
-	CheckTagIDThread checkTagIdThread;
-	ServerThread serverThread;
-	ClientThread clientThread;
-
-	String collectorHost;
-
-	List<String> agentList;
-
-	int timeout = 10 * 1000;
-
-	// for collector
-	private final List<String> pendingList;
-	private final List<String> completeList;
-
-	CheckPointService.Processor processor;
-	TNonblockingServerSocket serverSocket;
-	TNonblockingServer.Args arguments;
-	TServer server;
-
-	private boolean clientStarted = false;
-
-	public CheckPointManagerImpl() {
-		// agentList = new ArrayList<String>();
-		// agentTagMap = new HashMap<String, List<PendingQueueModel>>();
-		// waitedTagList = new HashMap<String, WaitingQueueModel>();
-		// checkPointFilePath = FlumeConfiguration.get().getCheckPointFile();
-		// checkTagIdThread = new CheckTagIDThread();
-		// pendingList = new ArrayList<String>();
-		// completeList = new ArrayList<String>();
-		// agentTransportMap = new HashMap<String, TTransport>();
-		// agentClientMap = new HashMap<String, CheckPointService.Client>();
-		// agentCollectorInfo = new HashMap<String, CollectorInfo>();
-
-		agentList = Collections.synchronizedList(new ArrayList<String>());
-		agentTagMap = Collections
-				.synchronizedMap(new HashMap<String, List<PendingQueueModel>>());
-		waitedTagList = Collections
-				.synchronizedMap(new HashMap<String, List<WaitingQueueModel>>());
-		checkPointFilePath = FlumeConfiguration.get().getCheckPointFile();
-		checkTagIdThread = new CheckTagIDThread();
-		pendingList = Collections.synchronizedList(new ArrayList<String>());
-		completeList = Collections.synchronizedList(new ArrayList<String>());
-		agentTransportMap = Collections
-				.synchronizedMap(new HashMap<String, TTransport>());
-		agentClientMap = Collections
-				.synchronizedMap(new HashMap<String, CheckPointService.Client>());
-		agentCollectorInfo = Collections
-				.synchronizedMap(new HashMap<String, CollectorInfo>());
+		try {
+			readFromFile();
+		} catch (IOException e) {
+			log.error("Failed to read checkpoint file", e);
+		}
+		
+		t = new CheckpointThread(this.baseDir, FlumeConfiguration.get().getConfigHeartbeatPeriod() * 2);
 	}
 	
+	@Override
+	public Map<String, Long> getCheckpoint() {
+		return Collections.unmodifiableMap(this.fileOffsets);
+	}
+	
+	@Override
+	public void setPendingQ(AckListener agentAckQueuer) {
+		this.listener = agentAckQueuer;
+	}
+	
+	@Override
+	public void addPendingQ(String tagId, Map<String, Long> fileOffsets) throws IOException {
+		//TODO 해당 tagId가 들어오면 fileOffsets을 합쳐야 한다. 
+		// 이 때 같은 파일이 들어오면 더 높은 offset으로 update를 하면 되고
+		// 새로운 파일이 들어오면 맵에 추가 하면 된다. 
+		// 이 때 언제 저 맵을 clear해 줄 것인가? 체크포인트 파일로 쓸때? 아니면 
+		// 삭제를 하면 안되나? ==> Master에서 정보를 확인하고 삭제 해야 할거 같은데
+		
+		// TODO IOException 처리
+		log.info("add pending : " + tagId + " , " + fileOffsets);
+		pending.add(new CheckpointData(tagId, fileOffsets));
+		listener.end(tagId);
+	}
 
-	class ClientThread extends Thread {
-		volatile boolean done = false;
-		long checkTagIdPeriod = FlumeConfiguration.get()
-				.getConfigHeartbeatPeriod();
-		CountDownLatch stopped = new CountDownLatch(1);
-
-		ClientThread() {
-			super("CheckManager Client");
-		}
-
-		TSocket socket = null;
-		TTransport transport = null;
-		TProtocol protocol = null;
-		CheckPointService.Client client = null;
-
-		public void run() {
-			log.info("Done " + done + " AgentSize " + agentList.size());
-			while (!done) {
-				synchronized (sync) {
-					if (agentClientMap.size() == agentCollectorInfo.size()) {
-
-					} else {
-						for (int i = 0; i < agentList.size(); i++) {
-							if (!agentClientMap.containsKey(agentList.get(i))) {
-								CollectorInfo ci = agentCollectorInfo
-										.get(agentList.get(i));
-								socket = new TSocket(ci.getCollectorHost(),
-										ci.getCollectorPort());
-								socket.setTimeout(timeout);
-								transport = new TFramedTransport(socket);
-								protocol = new TBinaryProtocol(transport);
-								client = new CheckPointService.Client(protocol);
-								log.info("New Client " + agentList.get(i)
-										+ " CollectorINFO ["
-										+ ci.getCollectorHost() + ":"
-										+ ci.getCollectorPort() + "]");
-								try {
-									transport.open();
-
-									agentTransportMap.put(agentList.get(i),
-											transport);
-									agentClientMap
-											.put(agentList.get(i), client);
-								} catch (TTransportException e) {
-									// TODO Auto-generated catch block
-									log.info(agentList.get(i)
-											+ " Connect refuse ");
-								}
-							}
-						}
-					}
-				}
-				try {
-					Thread.sleep(checkTagIdPeriod);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+	@Override
+	public void toAcked(String tag) throws IOException {
+		//TODO tag에 해당되는 파일 오프셋을 갱신?
+		//TODO 파일에 내리는 것은 다른 쓰레드가 하는게 좋겠지?
+		log.info("toAcked : " + tag);
+		for(CheckpointData data : pending) {
+			if(data.tag.equals(tag)) {
+				data.setAcked(true);
 			}
-			log.info("ClientThread End; ");
-
-			stopped.countDown();
-		}
-	};
-
-	public void startClient() {
-		if(!clientStarted) {
-			log.info("Start client threads in CheckpointManager");
-			clientThread = new ClientThread();
-			clientThread.start();
-			checkTagIdThread.start();
-			clientStarted = true;
 		}
 	}
 
 	@Override
-	public void stopClient() {
-		CountDownLatch stopped = clientThread.stopped;
-		clientThread.done = true;
+	public void retry(String tag) throws IOException {
+		// TODO 실패하면 리커버를 해야 한다. 
+		log.info("retry : " + tag);
+		for(CheckpointData data : pending) {
+			if(data.tag.equals(tag)) {
+				data.setAcked(false);
+				break;
+			}
+		}
+		mergeAndWrite();
+		try {
+			recover();
+		} catch (InterruptedException e) {
+			e.printStackTrace(); //TODO 예외 처리 
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+		} catch (FlumeSpecException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private ConcurrentLinkedQueue<CheckpointData> pending = new ConcurrentLinkedQueue<CheckpointData>();
+	
+	private synchronized void mergeAndWrite() throws IOException {
+		List<CheckpointData> ackedList = new ArrayList<CheckpointData>();
+		List<CheckpointData> removed = new ArrayList<CheckpointData>();
+
+		for(CheckpointData data : pending) {
+			if(data.isAcked == true) {
+				ackedList.add(data);
+				removed.add(data);
+			} else {
+				break;
+			}
+		}
+		pending.removeAll(removed);
+		
+		//TODO rety(tag)로 충분하나?. 순서대로 안왔을 때 보장은 안 해줘도 되나?
+		for(CheckpointData data : ackedList) {
+			for(String fileName : data.fileOffsets.keySet()) {
+				fileOffsets.put(fileName, data.fileOffsets.get(fileName));
+			}
+		}
+		writeToFile();
+	}
+	
+	
+	private void writeToFile() throws IOException {
+		if(fileOffsets == null || fileOffsets.size() == 0) 
+			return;
+		
+		File parent = new File(this.baseDir);
+		if(!parent.exists()) {
+			log.info(parent + " not exist and create " + parent.mkdir());
+		}
+
+		StringBuilder sb = new StringBuilder();
+		for(String fileName : this.fileOffsets.keySet()) {
+			sb.append(fileName + ":" + fileOffsets.get(fileName) + LINE_SEPERATOR);
+		}
+		BufferedWriter bw = null;
+		try {
+			bw = new BufferedWriter(new FileWriter(new File(this.baseDir, this.logicalNodeName + CKPOINT_SUFFIX)));
+			bw.write(sb.toString());
+			bw.flush();
+		} finally {
+			if(bw != null) {
+				bw.close();
+			}
+		}
+	}
+	
+	private void readFromFile() throws IOException {
+		log.info("Read checkpoint file ");
+		if(this.fileOffsets == null) {
+			this.fileOffsets = new HashMap<String, Long>();
+		} else {
+			fileOffsets.clear();
+		}
+		
+		String filePath = this.baseDir + File.separatorChar + this.logicalNodeName + CKPOINT_SUFFIX;
+		File path = new File(filePath);
+		if(!path.exists()) {
+			log.warn(filePath + " is not exist");
+			return;
+		}
+		
+		//fileName : offset
+		BufferedReader br = new BufferedReader(new FileReader(path));
+		String line = null;
+		while( (line = br.readLine()) != null) {
+			String[] result = line.split(":");
+			this.fileOffsets.put(result[0], Long.parseLong(result[1]));
+		}
+	}
+	
+	public void start() {
+		if(t.isAlive()) {
+			log.warn(t + " is already started...");
+			return;
+		}
+		t.start();
+	}
+	
+	public void stop() {
+		CountDownLatch stopped = t.stopped;
+		t.done = true;
 		try {
 			stopped.await();
 		} catch (InterruptedException e) {
-			log.error("Problem waiting for livenessManager to stop", e);
-		}
-
-		synchronized (sync) {
-			agentTransportMap = new HashMap<String, TTransport>();
-			agentClientMap = new HashMap<String, CheckPointService.Client>();
-			agentTagMap = new HashMap<String, List<PendingQueueModel>>();
-			waitedTagList = new HashMap<String, List<WaitingQueueModel>>();
-			agentList = new ArrayList<String>();
-			agentCollectorInfo = new HashMap<String, CollectorInfo>();
+			log.error("Problem waiting for CheckpointManager to stop", e);
+			t.interrupt();
 		}
 	}
-
-	class ServerThread extends Thread {
-		int port = FlumeConfiguration.get().getCheckPointPort();
-
-		ServerThread() {
-			super("CheckManager Server");
+	
+	/**
+	 * 여기에 위치하는게 맞나? 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws RuntimeException
+	 * @throws FlumeSpecException
+	 */
+	public void recover() throws IOException, InterruptedException, RuntimeException,
+		FlumeSpecException {
+		LogicalNode logicalNode = FlumeNode.getInstance().getLogicalNodeManager().get(logicalNodeName);
+		if (logicalNode == null) {
+			log.error("Failed recover [" + logicalNodeName + "] is not registed in CheckpointManager");
+			return;
 		}
-
-		ServerThread(int port) {
-			this.port = port;
-		}
-
-		public void run() {
-			try {
-				processor = new CheckPointService.Processor(
-						new CheckPointHandler());
-				serverSocket = new TNonblockingServerSocket(port);
-				arguments = new TNonblockingServer.Args(serverSocket);
-				arguments.processor(processor);
-				server = new TNonblockingServer(arguments);
-				server.serve();
-			} catch (TTransportException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-	};
-
-	@Override
-	public void startServer() {	
-		log.info("Start CheckpoinServer : " + FlumeConfiguration.get().getCheckPointPort());
-		serverThread = new ServerThread();
-		serverThread.start();
+		log.info("Closing logicalNode[" + logicalNodeName + "]");
+		logicalNode.close();
+		log.info("Closed logicalNode[" + logicalNodeName + "]");
+		
+		log.info("Restarting LogicalNode [" + logicalNodeName + "]");
+		logicalNode.restartNode();
+		log.info("Finished LogicalNode [" + logicalNodeName + "]");
 	}
-
-	@Override
-	public void startServer(int port) {
-		log.info("Start Checkpoint Server : " + port);
-		serverThread = new ServerThread(port);
-		serverThread.start();
-	}
-
-	@Override
-	public void stopServer() {
-		serverThread.stop();
-	}
-
-	@Override
-	public void setCollectorHost(String host) {
-		this.collectorHost = host;
-	}
-
-	@Override
-	public String getTagId(String agentName, String fileName) {
-		// TODO Auto-generated method stub
-		DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-		long pid = Thread.currentThread().getId();
-		String prefix = agentName + "_" + fileName;
-		Date now = new Date(Clock.unixTime());
-		long nanos = Clock.nanos();
-		String f;
-		synchronized (dateFormat) {
-			f = dateFormat.format(now);
-		}
-		String tagId = String.format("%s_%08d.%s.%012d", prefix, pid, f, nanos);
-
-		return tagId;
-	}
-
-	@Override
-	public Map<String, Long> getOffset(String logicalNodeName) {
-		// TODO Auto-generated method stub
-		// checkpoint ÌååÏùºÏóêÏÑú Ìï¥Îãπ logical NodeÏóê Ìï¥ÎãπÌïòÎäî ÌååÏùºÍ≥º
-		// offsetÏùÑ Ï†ÑÎã¨.
-		Map<String, Long> result = new HashMap<String, Long>();
-
-		FileReader fileReader;
-		BufferedReader reader;
-
-		File ckpointFilePath = new File(checkPointFilePath + File.separator
-				+ logicalNodeName + File.separator + "checkpoint");
-		try {
-			if (!ckpointFilePath.exists()) {
-				return null;
-			} else {
-				fileReader = new FileReader(ckpointFilePath);
-				reader = new BufferedReader(fileReader);
-				String line = null;
-				while ((line = reader.readLine()) != null) {
-					result.put(line.substring(0, line.indexOf(SEPERATOR)), Long
-							.valueOf(line.substring(line.indexOf(SEPERATOR),
-									line.length()).trim()));
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
-
-	class CheckTagIDThread extends Thread {
+	
+	class CheckpointThread extends Thread {
+		long period;
+		String baseDir;
 		volatile boolean done = false;
-		long checkTagIdPeriod = FlumeConfiguration.get()
-				.getConfigHeartbeatPeriod();
 		CountDownLatch stopped = new CountDownLatch(1);
-
-		CheckTagIDThread() {
-			super("Check TagID");
+		
+		CheckpointThread(String baseDir, long period) {
+			Preconditions.checkArgument(period > 0);
+			this.period = period;
+			this.baseDir = baseDir;
 		}
 
+		@Override
 		public void run() {
-
-			while (!done) {
+			while(!done) {
 				try {
-					checkCollectorTagID();
-					Clock.sleep(checkTagIdPeriod);
-				} catch (Exception e) {
-					e.printStackTrace();
+					mergeAndWrite();
+					Thread.sleep(period);
+				} catch (InterruptedException e) {
+					log.error("CheckPointManager interrupted, this is not expected!", e);
+				} catch (IOException e) {
+					log.error("Failed to write checkpoint file!", e);
 				}
 			}
-
 			stopped.countDown();
 		}
-
-	};
-
-	@Override
-	public void startTagChecker(String agentName, String collectorHost,
-			int collectorPort) {
-		// startClientÎ•º Ìò∏Ï∂ú ÌïòÏßÄ ÏïäÍ≥† Ïù¥ Î©îÏÜåÎìúÎ•º Ìò∏Ï∂ú ÌïòÏó¨
-		// Ïì∞Î†àÎìú ÎÇ¥ÏóêÏÑú startÎ•º Ìò∏Ï∂ú ÌïòÎèÑÎ°ù Ìï®.
-		log.info("StartTagChecker [" + agentName + ", " + collectorHost + ", " + collectorPort + "]");
-		startClient();
-		synchronized (sync) {
-			if (!agentList.contains(agentName)) {
-				agentList.add(agentName);
-			}
-
-			if (!agentCollectorInfo.containsKey(agentName)) {
-				agentCollectorInfo.put(agentName, new CollectorInfo(
-						collectorHost, collectorPort));
-			}
-		}
 	}
-
-	@Override
-	public void stopTagChecker(String agentName) {
-		log.info("StopTagChecker [" + agentName + "]");
-		synchronized (sync) {
-			agentTransportMap.remove(agentName);
-			agentClientMap.remove(agentName);
-			agentTagMap.remove(agentName);
-			waitedTagList.remove(agentName);
-			agentCollectorInfo.remove(agentName);
-			for (int i = 0; i < agentList.size(); i++) {
-				if (agentList.get(i) == agentName) {
-					agentList.remove(i);
-				}
-			}
-		}
-	}
-
-	@Override
-	public void addPendingQ(String tagId, String agentName,
-			Map<String, Long> tagContent) {
+	
+	class CheckpointData {
+		String tag;
+		Map<String, Long> fileOffsets;
+		boolean isAcked = false;
 		
-		log.info("addpendingq : " + tagContent.size());
-		for(String key : tagContent.keySet()) {
-			log.info(key + " : " + tagContent.values());
+		CheckpointData(String tag, Map<String, Long> fileOffsets) {
+			this.tag = tag;
+			this.fileOffsets = fileOffsets;
 		}
-		
-		List<PendingQueueModel> tags;
-		PendingQueueModel pqm;
-		synchronized (sync) {
-			if (agentTagMap.containsKey(agentName)) {
-				tags = agentTagMap.get(agentName);
-				pqm = new PendingQueueModel(tagId, tagContent);
-				tags.add(pqm);
-				agentTagMap.put(agentName, tags);
-			} else {
-				tags = new ArrayList<PendingQueueModel>();
-				pqm = new PendingQueueModel(tagId, tagContent);
-				tags.add(pqm);
-				agentTagMap.put(agentName, tags);
-			}
-			Log.info("add " + agentName + " : " + tagId + " into PendingQ");
+
+		public boolean isAcked() {
+			return isAcked;
+		}
+
+		public void setAcked(boolean isAcked) {
+			this.isAcked = isAcked;
 		}
 	}
-
-	@Deprecated
-	@Override
-	public void addCollectorPendingList(String tagId) {
-		// TODO Auto-generated method stub
-		pendingList.add(tagId);
-	}
-
-	@Override
-	public void addCollectorCompleteList(List<String> tagIds) {
-		// TODO Auto-generated method stub
-		for (int i = 0; i < tagIds.size(); i++) {
-			if (!completeList.contains(tagIds.get(i))) {
-				completeList.add(tagIds.get(i));
-				log.info("Tag " + tagIds.get(i) + " added CompleteList");
-			}
-		}
-		log.info("CompleteList Size " + completeList.size());
-	}
-
-	@Override
-	// CollectorÏóêÏÑú Î∞îÎ°ú CompleteListÎ°ú TagIdÎ•º ÎÑ£ÏúºÎ©¥ ÌïÑÏöî ÏóÜÏùå.
-	public void moveToCompleteList() {
-		// TODO Auto-generated method stub
-		Iterator<String> it = pendingList.iterator();
-		synchronized (sync) {
-			while (it.hasNext()) {
-				completeList.add(it.next());
-				it.remove();
-			}
-		}
-	}
-
-	@Override
-	// Collecter tagIdÍ∞Ä ÏûàÎäîÏßÄ ÌôïÏù∏ÌïòÍ≥† ÏûàÏúºÎ©¥ TrueÎ•º Ï†ÑÎã¨ÌïòÍ≥†
-	// completeListÏóêÏÑú ÏÇ≠Ï†úÌï®.
-	public boolean getTagList(String tagId) {
-		// TODO Auto-generated method stub
-		boolean res = false;
-		String v = null;
-		log.info("CompleteList " + completeList.size());
-		for (int i = 0; i < completeList.size(); i++) {
-			if (completeList.get(i).equals(tagId)) {
-				v = completeList.get(i);
-				res = true;
-				completeList.remove(i);
-			}
-		}
-		log.info("CompleteTag " + v + " Result " + tagId + " " + res);
-		return res;
-	}
-
-	public synchronized void checkCollectorTagID() {
-		// TODO Auto-generated method stub
-		// pendingQueue에 있는 agent의 tagId를 모두 체크 해보고
-		// 마지막 true리턴 받은 값을 기억했다가 checkpoint파일에 update한다.
-		boolean res = true;
-
-		try {
-			for (int i = 0; i < agentList.size(); i++) {
-				List<PendingQueueModel> tags = agentTagMap
-						.get(agentList.get(i));
-
-				if (tags != null && agentClientMap.size() > 0) {
-					List<PendingQueueModel> tmp = Collections
-							.synchronizedList(new ArrayList<PendingQueueModel>());
-					PendingQueueModel currentTagId = null;
-					for (int t = 0; t < tags.size(); t++) {
-						if (agentClientMap.get(agentList.get(i)) != null) {
-							res = agentClientMap.get(agentList.get(i))
-									.checkTagId(tags.get(t).getTagId());
-							if (res) {
-								// 현재 TagId 저장 후 리스트에서 삭제.
-								currentTagId = tags.get(t);
-								log.info("Current TagID "
-										+ currentTagId.getTagId());
-								tmp.add(tags.get(t));
-
-							} else {
-//								updateWaitingTagList(agentList.get(i), tags
-//										.get(t).getTagId(), tags.get(t)
-//										.getContents());
-							}
-						}
-					}
-					if (currentTagId != null) {
-						updateCheckPointFile(agentList.get(i), currentTagId);
-						for (int t = 0; t < tmp.size(); t++) {
-							if (agentTagMap.get(agentList.get(i)) != null) {
-								agentList.get(i);
-								tmp.get(t);
-								agentTagMap.get(agentList.get(i)).remove(
-										tmp.get(t));
-							}
-						}
-					}
-				}
-			}
-		} catch (TException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void updateWaitingTagList(String agentName, String tagId,
-			Map<String, Long> contents) {
-		Set<String> keySet = waitedTagList.keySet();
-		Object[] keys = keySet.toArray();
-		log.info("key " + keys.length);
-
-		List<String> deleteAgent = new ArrayList<String>();
-		for (int i = 0; i < keys.length; i++) {
-			for (int tag = 0; tag < waitedTagList.get(keys[i]).size(); tag++) {
-				if (waitedTagList.get(keys[i]).get(tag).getTagId() == tagId
-						&& waitedTagList.get(keys[i]).get(tag).getWaitedTime() >= FlumeConfiguration
-								.get().getCheckPointTimeout()) {
-					PendingQueueModel pqm = new PendingQueueModel(tagId,
-							waitedTagList.get(keys[i]).get(tag).getContents());
-					updateCheckPointFile(keys[i].toString(), pqm);
-					deleteAgent.add(keys[i].toString());
-				}
-			}
-		}
-		
-		for(int i=0; i<deleteAgent.size(); i++){
-			log.info("Delete from Waiting Queue " + deleteAgent.get(i));
-			waitedTagList.remove(deleteAgent.get(i));
-			agentTagMap.remove(deleteAgent.get(i));
-		}
-
-		WaitingQueueModel wqm = null;
-		List<WaitingQueueModel> list = null;
-		if (waitedTagList.containsKey(agentName)) {
-			list = waitedTagList.get(agentName);
-			// TagId로 체크
-			for (int i = 0; i < list.size(); i++) {
-				if (list.get(i).getTagId() == tagId) {
-					list.get(i)
-							.updateWaitedTime(
-									FlumeConfiguration.get()
-											.getConfigHeartbeatPeriod());
-				}
-			}
-			waitedTagList.put(agentName, list);
-		} else {
-			list = new ArrayList<WaitingQueueModel>();
-			list.add(new WaitingQueueModel(tagId, contents, 0));
-			waitedTagList.put(agentName, list);
-		}
-
-	}
-
-	public void updateCheckPointFile(String logicalNodeName,
-			PendingQueueModel pendingQueueModel) {
-		// TODO Auto-generated method stub
-		Map<String, Long> res = pendingQueueModel.getContents();
-		Set<String> keySet = res.keySet();
-		Object[] keys = keySet.toArray();
-
-		File ckpointFilePath = new File(checkPointFilePath + File.separator
-				+ logicalNodeName);
-
-		File ckpointFile = new File(checkPointFilePath + File.separator
-				+ logicalNodeName + File.separator + "checkpoint");
-		Log.info("CheckPoint File Path " + ckpointFile.toString());
-		FileReader fileReader;
-		BufferedReader reader;
-		FileWriter fw;
-		BufferedWriter bw = null;
-		StringBuilder contents;
-
-		Map<String, String> compareMap = new HashMap<String, String>();
-
-		try {
-			if (!ckpointFilePath.exists()) {
-				ckpointFilePath.mkdirs();
-				ckpointFile.createNewFile();
-			}
-
-			log.info("[" + ckpointFile.getPath() + "]"
-					+ " Check Point File Size " + ckpointFile.length());
-
-			String line = null;
-			if (ckpointFile.length() > 1) {
-				contents = new StringBuilder();
-				fileReader = new FileReader(ckpointFile);
-				reader = new BufferedReader(fileReader);
-
-				// 현재 체크포인트 파일을 읽어서 메모리에 저장.
-				while ((line = reader.readLine()) != null) {
-					compareMap.put(
-							line.substring(0, line.indexOf(SEPERATOR)).trim(),
-							line.substring(line.indexOf(SEPERATOR),
-									line.length()).trim());
-				}
-
-				// 입력 받은 TagID의 값 입력
-				for (int i = 0; i < keys.length; i++) {
-					compareMap.put(keys[i].toString(),
-							String.valueOf(res.get(keys[i])));
-				}
-
-				Set cpSet = compareMap.keySet();
-				Object[] cps = cpSet.toArray();
-				for (int i = 0; i < cps.length; i++) {
-					contents.append(cps[i].toString() + SEPERATOR
-							+ compareMap.get(cps[i]) + LINE_SEPERATOR);
-				}
-
-				fw = new FileWriter(ckpointFile);
-				bw = new BufferedWriter(fw);
-				bw.write(contents.toString());
-				log.info("content is : " + contents);
-//				bw.close();
-
-			} else {
-				fileReader = new FileReader(ckpointFile);
-				reader = new BufferedReader(fileReader);
-				contents = new StringBuilder();
-
-				for (int i = 0; i < keys.length; i++) {
-					contents.append(keys[i].toString() + SEPERATOR
-							+ res.get(keys[i]) + LINE_SEPERATOR);
-				}
-				fw = new FileWriter(ckpointFile);
-				bw = new BufferedWriter(fw);
-				bw.write(contents.toString());
-				log.info("content is : " + contents);
-//				bw.close();
-				reader.close();
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				bw.flush();
-				bw.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-	}
-
-	public static void main(String[] args) throws InterruptedException {
-	}
-
+	
+	
 }

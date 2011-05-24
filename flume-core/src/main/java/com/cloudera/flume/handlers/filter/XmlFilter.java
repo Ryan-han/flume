@@ -2,7 +2,9 @@ package com.cloudera.flume.handlers.filter;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -15,28 +17,49 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import com.cloudera.flume.conf.Context;
+import com.cloudera.flume.conf.LogicalNodeContext;
 import com.cloudera.flume.conf.SinkFactory.SinkDecoBuilder;
 import com.cloudera.flume.core.Event;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.core.EventSinkDecorator;
+import com.cloudera.flume.handlers.endtoend.AckChecksumInjector;
+import com.cloudera.flume.handlers.text.TailSource;
 import com.google.common.base.Preconditions;
 
 public class XmlFilter extends EventSinkDecorator<EventSink> {
 	Log LOG = LogFactory.getLog(XmlFilter.class);
 	private SAXParser sax;
+	private String logicalNodeName;
+	
+	public static final String LOG_ID = "LogId";
 
-	public XmlFilter(EventSink s) {
+	public XmlFilter(EventSink s, String logicalNodeName) {
 		super(s);
+		this.logicalNodeName = logicalNodeName;
 	}
 
 	@Override
 	public void append(Event e) throws IOException, InterruptedException {
+		if(e.get(AckChecksumInjector.ATTR_ACK_TYPE) != null) {
+			if(!Arrays.equals(e.get(AckChecksumInjector.ATTR_ACK_TYPE), AckChecksumInjector.CHECKSUM_MSG)) {
+				super.append(e);
+				return;
+			}
+		}
+		
 		ByteArrayInputStream bis = new ByteArrayInputStream(e.getBody());
 		try {
 			sax.parse(bis, new TransactionXmlHandler(e));
 		} catch (SAXException e1) {
 			e1.printStackTrace();
 		}
+		
+		// Log의 UUID 생성
+		CRC32 crc = new CRC32();
+		crc.reset();
+		crc.update(e.getBody());
+		long hash = crc.getValue();
+		e.set(LOG_ID, (logicalNodeName + new String(e.get(TailSource.A_TAILSRCFILE)) + hash).getBytes());
 		super.append(e);
 	}
 
@@ -123,9 +146,9 @@ public class XmlFilter extends EventSinkDecorator<EventSink> {
 			@Override
 			public EventSinkDecorator<EventSink> build(Context context,
 					String... argv) {
-				Preconditions.checkArgument(argv.length == 0,
-						"usage: xmlFilter");
-				return new XmlFilter(null);
+				Preconditions.checkArgument(argv.length == 0, "usage: xmlFilter");
+				Preconditions.checkNotNull(context.getValue(LogicalNodeContext.C_LOGICAL));
+				return new XmlFilter(null, context.getValue(LogicalNodeContext.C_LOGICAL));
 			}
 		};
 	}

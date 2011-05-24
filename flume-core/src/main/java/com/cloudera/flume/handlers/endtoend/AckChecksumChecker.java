@@ -119,17 +119,17 @@ public class AckChecksumChecker<S extends EventSink> extends
     String k = new String(btag);
 
     if (Arrays.equals(btyp, AckChecksumInjector.CHECKSUM_START)) {
-      LOG.info("Starting checksum group called " + k);
+      LOG.debug("Starting checksum group called " + k);
       // Checksum Start marker: create new partial
       long newchk = ByteBuffer.wrap(bchk).getLong();
-      LOG.info("initial checksum is " + Long.toHexString(newchk));
+      LOG.debug("initial checksum is " + Long.toHexString(newchk));
       partial.put(k, newchk);
       ackStarts.incrementAndGet();
       listener.start(k);
 
       return;
     } else if (Arrays.equals(btyp, AckChecksumInjector.CHECKSUM_STOP)) {
-      LOG.info("Finishing checksum group called '" + k + "'");
+      LOG.debug("Finishing checksum group called '" + k + "'");
       ackEnds.incrementAndGet();
       // Checksum stop marker: move from partial to done
       Long chksum = partial.get(k);
@@ -152,11 +152,11 @@ public class AckChecksumChecker<S extends EventSink> extends
         return;
       }
 
-      LOG.info("Checksum succeeded " + Long.toHexString(chksum));
+      LOG.debug("Checksum succeeded " + Long.toHexString(chksum));
       listener.end(k);
       ackSuccesses.incrementAndGet();
       partial.remove(k);
-      LOG.info("moved from partial to complete " + k);
+      LOG.debug("moved from partial to complete " + k);
       return;
     }
 

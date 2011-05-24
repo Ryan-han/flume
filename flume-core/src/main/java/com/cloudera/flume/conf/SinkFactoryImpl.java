@@ -89,9 +89,7 @@ import com.cloudera.flume.reporter.sampler.IntervalSampler;
 import com.cloudera.flume.reporter.sampler.ProbabilitySampler;
 import com.cloudera.flume.reporter.sampler.ReservoirSamplerDeco;
 import com.cloudera.util.Pair;
-import com.nexr.agent.cp.CheckpointChecker;
-import com.nexr.agent.cp.CheckpointDeco;
-import com.nexr.agent.cp.CheckpointRegister;
+import com.nexr.agent.cp.CheckpointInjector;
 
 /**
  * This factory builds sink and sink decorators. This implementation requires a
@@ -104,7 +102,7 @@ public class SinkFactoryImpl extends SinkFactory {
   static Object[][] sinkList = {
       // high level sinks.
       { "collectorSink", CollectorSink.hdfsBuilder() },
-      { "checkpointCollectorSink", CollectorSink.checkpointHdfsBuilder() },
+      { "sdpCollectorSink", CollectorSink.sdpBuilder() },
 
       { "agentSink", AgentSink.e2eBuilder() },
       { "agentE2ESink", AgentSink.e2eBuilder() }, // now with acks
@@ -140,11 +138,9 @@ public class SinkFactoryImpl extends SinkFactory {
       { "escapedCustomDfs", EscapedCustomDfsSink.builder() }, // escapes
       { "rpcSink", RpcSink.builder() }, // creates AvroEventSink or
       // ThriftEventSink
-      { "checkpointRpcSink", RpcSink.cpBuilder() },
       { "syslogTcp", SyslogTcpSink.builder() },
       { "irc", IrcSink.builder() },
       { "thriftSink", ThriftEventSink.builder() },
-      { "checkpoinThriftSink", ThriftEventSink.cPbuilder() },
       { "avroSink", AvroEventSink.builder() },
       // advanced
       { "failChain", FailoverChainSink.builder() }, // @deprecated
@@ -175,9 +171,7 @@ public class SinkFactoryImpl extends SinkFactory {
       { "insistentAppend", InsistentAppendDecorator.builder() },
       { "stubbornAppend", StubbornAppendSink.builder() },
       
-      { "checkpointDeco", CheckpointDeco.builder() },
-      { "checkpointRegister", CheckpointRegister.builder() },
-      { "checkpointChecker", CheckpointChecker.builder() },
+      { "checkpointInjector", CheckpointInjector.builder() },
 
       // relational algebra projection
       { "value", ValueDecorator.builder() },

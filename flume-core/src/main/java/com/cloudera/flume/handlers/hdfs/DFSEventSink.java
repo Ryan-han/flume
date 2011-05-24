@@ -46,6 +46,7 @@ public class DFSEventSink extends EventSink.Base {
   static final Logger LOG = LoggerFactory.getLogger(DFSEventSink.class);
   protected static final String KEY_CLASS_NAME = "keyClassName";
   protected static final String VALUE_CLASS_NAME = "valueClassName";
+	protected static final String RENAME = "rename";
   String path;
   Writer writer = null;
   // We keep a - potentially unbounded - set of writers around to deal with
@@ -61,14 +62,21 @@ public class DFSEventSink extends EventSink.Base {
   Class<? extends Writable> keyClz;
   Class<? extends Writable> valueClz;
 
+  private boolean rename = false;
+  
   public DFSEventSink(String path) {
+  	this(path, false);
+  }
+
+  public DFSEventSink(String path, boolean rename) {
     this.path = path;
     shouldSub = Event.containsTag(path);
+    this.rename = rename;
   }
   
   @SuppressWarnings("unchecked")
-  public DFSEventSink(String path, String keyClzName, String valueClzName) {
-	  this(path);
+  public DFSEventSink(String path, String keyClzName, String valueClzName, boolean rename) {
+	  this(path, rename);
 	  try {
 		  if(keyClzName != null && keyClzName.length() > 0) {
 			  keyClz =  (Class<? extends Writable>) Class.forName(keyClzName);
@@ -144,10 +152,24 @@ public class DFSEventSink extends EventSink.Base {
 
   @Override
   public void close() throws IOException {
+  	Path dstPath = new Path(this.path);
+  	FileSystem hdfs = dstPath.getFileSystem(FlumeConfiguration.get());
+  	
     if (shouldSub) {
       for (Entry<String, Writer> e : sfWriters.entrySet()) {
         LOG.info("Closing " + e.getKey());
         e.getValue().close();
+        
+        if(rename) {
+        	Path newPath = null; 
+        	if(e.getKey().endsWith(".seq")) {
+        		newPath = new Path(e.getKey().replace(".seq", ".done"));
+        	} else {
+        		newPath = new Path(e.getKey() + ".done");
+        	}
+        	hdfs.rename(new Path(e.getKey()), newPath);
+        }
+        
       }
     } else {
 
@@ -157,6 +179,16 @@ public class DFSEventSink extends EventSink.Base {
       }
       LOG.info("Closing " + path);
       writer.close();
+      
+      if(rename) {
+      	Path newPath = null; 
+      	if(this.path.endsWith(".seq")) {
+      		newPath = new Path(this.path.replace(".seq", ".done"));
+      	} else {
+      		newPath = new Path(this.path + ".done");
+      	}
+        hdfs.rename(dstPath, newPath);
+      }
 
       writer = null;
     }
@@ -182,11 +214,14 @@ public class DFSEventSink extends EventSink.Base {
         
         String keyClassName = context.getValue(KEY_CLASS_NAME);
         String valueClassName = context.getValue(VALUE_CLASS_NAME);
+
+        boolean rename = context.getValue(RENAME) != null ? Boolean.parseBoolean(context.getValue(RENAME)) : false;
+        
         if(keyClassName != null && keyClassName.length() > 0 
         		&& valueClassName != null && valueClassName.length() >0) {
-        	return new DFSEventSink(args[0], keyClassName, valueClassName);
+        	return new DFSEventSink(args[0], keyClassName, valueClassName, rename);
         } else {
-        	return new DFSEventSink(args[0]);
+        	return new DFSEventSink(args[0], rename);
         }
       }
     };
