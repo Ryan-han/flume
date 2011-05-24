@@ -202,9 +202,9 @@ public class TailDirSource extends EventSource.Base {
         			  checkPointOffset = f.length();
         		  }
         		  c = new Cursor(tail.sync, f, checkPointOffsetMap.get(f.getName()), 
-        				  f.length(), f.lastModified(), true);
+        				  f.length(), f.lastModified(), useCheckpoint);
         		  try {
-  					c.initCursorPos();
+        		  	c.initCursorPos();
           		  } catch (InterruptedException e) {
           			  LOG.error("Initializing of custom delimiter cursor failed", e);
           			  c.close();
@@ -241,9 +241,9 @@ public class TailDirSource extends EventSource.Base {
         			  checkPointOffset = f.length();
         		  }
         		  c = new CustomDelimCursor(tail.sync, f, checkPointOffsetMap.get(f.getName()), 
-        				  f.length(), f.lastModified(), delimRegex, delimMode, true);
+        				  f.length(), f.lastModified(), delimRegex, delimMode, useCheckpoint);
         		  try {
-					c.initCursorPos();
+        		  	c.initCursorPos();
         		  } catch (InterruptedException e) {
         			  LOG.error("Initializing of custom delimiter cursor failed", e);
         			  c.close();
@@ -253,7 +253,7 @@ public class TailDirSource extends EventSource.Base {
         		  
         		  checkPointOffsetMap.remove(f.getName());
         	  } else {
-        		  c = new CustomDelimCursor(tail.sync, f, delimRegex, delimMode);
+        		  c = new CustomDelimCursor(tail.sync, f, delimRegex, delimMode, useCheckpoint);
         	  }
           }
         }

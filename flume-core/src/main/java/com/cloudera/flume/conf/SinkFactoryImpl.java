@@ -102,6 +102,7 @@ public class SinkFactoryImpl extends SinkFactory {
   static Object[][] sinkList = {
       // high level sinks.
       { "collectorSink", CollectorSink.hdfsBuilder() },
+      { "sdpCollectorSink", CollectorSink.sdpBuilder() },
 
       { "agentSink", AgentSink.e2eBuilder() },
       { "agentE2ESink", AgentSink.e2eBuilder() }, // now with acks

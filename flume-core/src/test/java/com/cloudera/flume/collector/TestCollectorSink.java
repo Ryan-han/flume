@@ -39,7 +39,6 @@ import junit.framework.Assert;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,6 @@ import com.cloudera.util.Clock;
 import com.cloudera.util.FileUtil;
 import com.cloudera.util.Pair;
 import com.nexr.agent.cp.CheckPointManager;
-import com.nexr.agent.cp.CheckpointDeco;
 
 /**
  * This tests the builder and makes sure we can close a collector properly when
@@ -120,11 +118,13 @@ public class TestCollectorSink {
     String src3 = "collectorSink(\"file:///tmp/test\", \"testfilename\", 1000)";
     FlumeBuilder.buildSink(new Context(), src3);
     
-    String src4 = "checkpointCollectorSink(\"file:///tmp/test\", \"testfilename\")";
+    String src4 = "sdpCollectorSink(\"hdfs://localhost:8020/test\" , \"logprefix-\")";
     EventSink snk = FlumeBuilder.buildSink(new Context(), src4);
-    System.out.println(snk);
+    System.out.println("done");
     
-    
+    String src5 = "dfs(\"hdfs://localhost:8020/test/logprefix-%{rolltag}\" ,keyClassName=\"com.nexr.data.sdp.rolling.hdfs.LogRecordKey\" ,valueClassName=\"com.nexr.data.sdp.rolling.hdfs.LogRecord\" ,rename=true)";
+    snk = FlumeBuilder.buildSink(new Context(), src5);
+    System.out.println("done");
   }
 
   @Test(expected = FlumeArgException.class)
@@ -159,13 +159,6 @@ public class TestCollectorSink {
       snk.open();
       snk.close();
     }
-    
-    String src3 = "checkpointCollectorSink(\"file:///tmp/test\",\"testfilename\")";
-    for (int i = 0; i < 100; i++) {
-        EventSink snk = FlumeBuilder.buildSink(new Context(), src3);
-        snk.open();
-        snk.close();
-     }
   }
 
   /**
@@ -233,29 +226,6 @@ public class TestCollectorSink {
     inj.append(new EventImpl("foo 3".getBytes()));
     inj.close();
     return ackedmem;
-  }
-  
-  MemorySinkSource setupCheckpointRoll() throws IOException, InterruptedException  {
-	  MemorySinkSource cpmem = new MemorySinkSource();
-	  
-	  MockCheckpointManager mockCpManager = new MockCheckpointManager();
-	  CheckpointDeco cpDeco = new CheckpointDeco(cpmem, "node1",  mockCpManager, 10000l);
-	  
-	  cpDeco.open();
-	  cpDeco.append(new EventImpl("foo 1".getBytes()));
-	  cpDeco.close();
-	  
-	  cpDeco = new CheckpointDeco(cpmem, "node1", mockCpManager, 10000l);
-	  cpDeco.open();
-	  cpDeco.append(new EventImpl("foo 2".getBytes()));
-	  cpDeco.close();
-	  
-	  cpDeco = new CheckpointDeco(cpmem, "node1", mockCpManager, 10000l);
-	  cpDeco.open();
-	  cpDeco.append(new EventImpl("foo 3".getBytes()));
-	  cpDeco.close();
-	  
-	  return cpmem;
   }
   
   class MockCheckpointManager implements CheckPointManager {
@@ -771,55 +741,4 @@ public class TestCollectorSink {
     assertEquals(1, (long) rptb.getLongMetric("bar"));
   }
   
-  @Test
-  public void testCheckpointCollectorSink() throws IOException, InterruptedException, FlumeSpecException {
-	  MockCheckpointManager cpManager = new MockCheckpointManager();
-	  BenchmarkHarness.setupFlumeNode(null, null, null, null, null, cpManager);
-	  FlumeNode 
-	  
-	  node = FlumeNode.getInstance();
-	  
-	  
-	  File tmpdir = null;
-	  try {
-		  EventSource cpMem = setupCheckpointRoll();
-		  
-		  tmpdir = FileUtil.mktempdir();
-		  String snkspec = "checkpointCollectorSink(\"file:///" + tmpdir.getAbsolutePath()
-		  + "\",\"\")";
-		  CollectorSink snk = (CollectorSink) FlumeBuilder.buildSink(new Context(), snkspec);
-		  RollSink roll = snk.roller;
-		  
-		  snk.open();
-		  
-		  String tag1 = roll.getCurrentTag();
-		  LOG.info(tag1);
-		  snk.append(cpMem.next()); // cp start
-		  snk.append(cpMem.next()); // cp data
-		  snk.append(cpMem.next()); // cp end
-		  snk.append(cpMem.next()); // cp start
-		  Clock.sleep(10);
-		  roll.rotate();
-		  
-		  Assert.assertEquals(1,cpManager.collect_pending.size());
-		  snk.append(cpMem.next()); // cp data
-		  snk.append(cpMem.next()); // cp end
-		  snk.append(cpMem.next()); // cp start
-		  snk.append(cpMem.next()); // cp data
-		  snk.append(cpMem.next()); // cp end
-		  
-		  Clock.sleep(10);
-		  roll.rotate();
-		  
-		  Assert.assertEquals(3,cpManager.collect_pending.size());
-		  
-		  snk.close();
-		
-	  } finally {
-		  if(tmpdir != null) {
-			  FileUtil.rmr(tmpdir);
-		  }
-		  BenchmarkHarness.cleanupLocalWriteDir();
-	  }
-  }
 }

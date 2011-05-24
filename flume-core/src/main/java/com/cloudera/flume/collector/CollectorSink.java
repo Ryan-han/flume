@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -323,4 +324,38 @@ public class CollectorSink extends EventSink.Base {
       }
     };
   }
+		
+	public static SinkBuilder sdpBuilder() {
+		return new SinkBuilder() {
+			@Override
+			public EventSink build(Context context, String... argv) {
+				Preconditions.checkArgument(argv.length <= 3 && argv.length >= 2,
+        "usage: sdpSink[(dfsdir,prefix[,rollmillis])]");
+		    
+				String logdir = FlumeConfiguration.get().getCollectorDfsDir(); // default
+		    long millis = FlumeConfiguration.get().getCollectorRollMillis();
+		    String prefix = "";
+		    if (argv.length >= 1) {
+		      logdir = argv[0]; // override
+		    }
+		    if (argv.length >= 2) {
+		      prefix = argv[1];
+		    }
+		    if (argv.length >= 3) {
+		      millis = Long.parseLong(argv[2]);
+		    }
+		    
+	    	final String snkSpec = "dfs(\"" + StringEscapeUtils.escapeJava(logdir)
+	    		+ Path.SEPARATOR + StringEscapeUtils.escapeJava(prefix) + "%{rolltag}"
+	    		+ "\" ,keyClassName=\"com.nexr.data.sdp.rolling.hdfs.LogRecordKey\" " 
+	    		+ ",valueClassName=\"com.nexr.data.sdp.rolling.hdfs.LogRecord\" " 
+	    		+ ",rename=true)";
+	    	
+	    	EventSink snk = new CollectorSink(context, snkSpec, millis,
+	    			new ProcessTagger(), 250, FlumeNode.getInstance()
+            .getCollectorAckListener());
+	      return snk;
+			}
+		};
+	}
 }

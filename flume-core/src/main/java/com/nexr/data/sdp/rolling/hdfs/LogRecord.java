@@ -18,12 +18,26 @@
 
 package com.nexr.data.sdp.rolling.hdfs;
 
+import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.record.Buffer;
 
+import com.cloudera.flume.core.Event;
+import com.google.common.base.Preconditions;
+
 public class LogRecord extends LogRecordJT implements Record {
 	public LogRecord() {
+	}
+	
+	public LogRecord(Event e) {
+		Preconditions.checkNotNull(e);
+		this.mapFields = new TreeMap<String, org.apache.hadoop.record.Buffer>();
+		
+		Map<String, byte[]> attrs = e.getAttrs();
+		for(String key : attrs.keySet()) {
+			mapFields.put(key, new Buffer(attrs.get(key)));
+		}
 	}
 
 	public void add(String key, String value) {
@@ -56,42 +70,4 @@ public class LogRecord extends LogRecordJT implements Record {
 			this.mapFields.remove(field);
 		}
 	}
-
-	// @Override
-	// public String toString() {
-	// Set<Map.Entry<String, Buffer>> f = this.mapFields.entrySet();
-	// Iterator<Map.Entry<String, Buffer>> it = f.iterator();
-	//
-	// Map.Entry<String, Buffer> entry = null;
-	// StringBuilder sb = new StringBuilder();
-	// sb.append("<event  ");
-	// StringBuilder body = new StringBuilder();
-	//
-	// String key = null;
-	// String val = null;
-	// boolean hasBody = false;
-	// String bodyVal = null;
-	// while (it.hasNext()) {
-	// entry = it.next();
-	// key = entry.getKey().intern();
-	// val = new String(entry.getValue().get());
-	// if (key.intern() == Record.bodyField.intern()) {
-	// hasBody = true;
-	// bodyVal = val;
-	// } else {
-	// sb.append(key).append("=\"").append(val).append("\" ");
-	// body.append(key).append(" = ").append(val).append("<br>");
-	// }
-	//
-	// }
-	// if (hasBody) {
-	// sb.append(">").append(bodyVal);
-	// } else {
-	// sb.append(">").append(body);
-	// }
-	// sb.append("</event>");
-	//
-	// return sb.toString();
-	// }
-
 }

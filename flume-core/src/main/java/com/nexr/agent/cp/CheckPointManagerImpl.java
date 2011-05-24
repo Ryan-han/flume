@@ -114,7 +114,6 @@ public class CheckPointManagerImpl implements CheckPointManager {
 	
 	private synchronized void mergeAndWrite() throws IOException {
 		List<CheckpointData> ackedList = new ArrayList<CheckpointData>();
-		
 		List<CheckpointData> removed = new ArrayList<CheckpointData>();
 
 		for(CheckpointData data : pending) {
@@ -173,6 +172,7 @@ public class CheckPointManagerImpl implements CheckPointManager {
 		String filePath = this.baseDir + File.separatorChar + this.logicalNodeName + CKPOINT_SUFFIX;
 		File path = new File(filePath);
 		if(!path.exists()) {
+			log.warn(filePath + " is not exist");
 			return;
 		}
 		

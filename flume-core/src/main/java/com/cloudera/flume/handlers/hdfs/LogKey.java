@@ -9,7 +9,7 @@ public class LogKey extends DetailEventKey {
 	
 	public static final String DATA_TYPE = "SystemHeader.LogType";
 	public static final String TIME = "DataHeader.Timestamp";
-	public static final String LOG_ID= "DataHeader.TransactionID";
+	public static final String LOG_ID= "DataHeader.TransactionID"; //TODO 새로 생성해 주어야 한다. UUID로 
 
 	public LogKey(Event e) {
 		super(e);
