@@ -3,14 +3,14 @@ package com.nexr.dedup.workflow;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.nexr.dedup.DuplicateManager;
+import com.nexr.dedup.DedupManager;
 import com.nexr.rolling.workflow.job.Duplication;
 
 /**
  * @author dani.kim@nexr.com
  */
 public class TestDedupWorkflow extends DedupTestBase {
-	private DuplicateManager manager = new DuplicateManager();
+	private DedupManager manager = new DedupManager();
 	
 	@Before
 	public void init() throws Exception {

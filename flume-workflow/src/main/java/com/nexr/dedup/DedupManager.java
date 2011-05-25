@@ -21,7 +21,7 @@ import com.nexr.rolling.workflow.job.Duplication;
 /**
  * @author dani.kim@nexr.com
  */
-public class DuplicateManager implements Runnable, IZkChildListener {
+public class DedupManager implements Runnable, IZkChildListener {
 	private static final String DEDUP_QUEUE = "/dedup/queue";
 	
 	private Logger LOG = LoggerFactory.getLogger(getClass());
@@ -35,7 +35,7 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	private BlockingQueue<Duplication> queue;
 	private ConcurrentHashMap<String, Duplication> duplications;
 	
-	public DuplicateManager() {
+	public DedupManager() {
 		queue = new LinkedBlockingQueue<Duplication>();
 		duplications = new ConcurrentHashMap<String, Duplication>();
 		client.subscribeChildChanges(DEDUP_QUEUE, this);

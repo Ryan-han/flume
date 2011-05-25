@@ -5,7 +5,7 @@ import java.util.Date;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.nexr.dedup.DuplicateManager;
+import com.nexr.dedup.DedupManager;
 import com.nexr.framework.workflow.JobLauncher;
 import com.nexr.rolling.workflow.job.RollingJob;
 import com.nexr.rolling.workflow.mapred.DailyRollingMr;
@@ -17,7 +17,7 @@ import com.nexr.rolling.workflow.mapred.PostRollingMr;
  */
 public class RollingJobTest {
 	public static void main(String[] args) {
-		new Thread(new DuplicateManager()).start();
+		new Thread(new DedupManager()).start();
 		
 		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("classpath:workflow-app.xml");
 		JobLauncher launcher = ctx.getBean(JobLauncher.class);
