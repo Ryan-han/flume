@@ -40,7 +40,7 @@
 	</property>
 	
 	<property>
-		<name>collector.source.dir</name>
+		<name>collector.source.path</name>
 		<value>/collector/source</value>
 	</property>
 	
@@ -71,11 +71,11 @@
 
 	<property>
 		<name>schedule.hourly</name>
-		<value>0 0 * * * ?</value>
+		<value>20 0 * * * ?</value>
 	</property>
 	
 	<property>
 		<name>schedule.daily</name>
-		<value>0 0 0 * * ?</value>
+		<value>40 0 0 * * ?</value>
 	</property>
 </configuration>
