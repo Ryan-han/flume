@@ -33,11 +33,11 @@ import org.apache.log4j.Logger;
 import com.nexr.data.sdp.rolling.hdfs.LogRecord;
 import com.nexr.data.sdp.rolling.hdfs.LogRecordKey;
 
-public class DailyOutputFormat<Text extends WritableComparable, LogRecord>
+public class DedupDailyOutputFormat<Text extends WritableComparable, LogRecord>
 		extends MultipleOutputFormat<Text, LogRecord> implements
 		JobConfigurable {
 
-	static Logger log = Logger.getLogger(DailyOutputFormat.class);
+	static Logger log = Logger.getLogger(DedupDailyOutputFormat.class);
 	SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
 
 	private String prefix;
