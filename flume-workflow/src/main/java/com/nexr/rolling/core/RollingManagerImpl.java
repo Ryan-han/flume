@@ -1,11 +1,8 @@
 package com.nexr.rolling.core;
 
-import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.StringTokenizer;
 
 import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.IZkDataListener;
@@ -14,142 +11,41 @@ import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
 import org.apache.log4j.Logger;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.nexr.rolling.conf.RollingConfiguration;
 import com.nexr.rolling.exception.RollingException;
 import com.nexr.rolling.schd.RollingScheduler;
+import com.nexr.rolling.workflow.ZkClientFactory;
+import com.nexr.sdp.Configuration;
 
-public class RollingManagerImpl implements Daemon, RollingManager,
-		IZkDataListener, IZkChildListener {
-
-	private static final Logger log = Logger
-			.getLogger(RollingManagerImpl.class);
-	
+public class RollingManagerImpl implements Daemon, RollingManager, IZkDataListener, IZkChildListener {
+	private static final Logger log = Logger.getLogger(RollingManagerImpl.class);
 	private boolean isMaster = false;
 	
-	private ApplicationContext context;
-	private ZkClient zkClient;
-	private RollingConfiguration conf;
-	String config = null;
-	RollingConfig rollingConfig = null;
+	private ZkClient zkClient = ZkClientFactory.getClient();
+	private Configuration config = Configuration.getInstance();
 	RollingScheduler scheduler = null;
-	
 	private String hostName = null;
-	private String rollingRootPath = null;
-	private String rollingConfigPath = null;
-	private String rollingMemberPath = null;
-	private String rollingMasterPath = null;
 	
-	private String dedupPostPath = null;
-	private String dedupHourlyPath = null;
-	private String dedupDailyPath = null;
 	
 	@Override
-	public void init(DaemonContext arg0) throws DaemonInitException, Exception {
-		// TODO Auto-generated method stub
-		conf = new RollingConfiguration();
-		rollingRootPath = conf.getRollingRootPath();
-		rollingConfigPath = conf.getRollingRootPath() + conf.getRollingConfigPath();
-		rollingMemberPath = conf.getRollingRootPath() + conf.getRollingMemberPath();
-		rollingMasterPath = conf.getRollingRootPath() + conf.getRollingMasterPath();
-		
-		dedupPostPath = conf.getDedupRootPath() + conf.getDedupPostPath();
-		dedupHourlyPath = conf.getDedupRootPath() + conf.getDedupHourlyPath();
-		dedupDailyPath = conf.getDedupRootPath() + conf.getDedupDailyPath();
-		
-		
+	public void init(DaemonContext daemonContext) throws DaemonInitException, Exception {
 		hostName = getLocalhostName();
 		scheduler = new RollingScheduler();
-		zkClient = new ZkClient(conf.getZookeeperServers(), 30000,
-				conf.getZookeeperSessionTimeout());
 
 		announceNode();
 		masterRegister();
 		
-		zkClient.subscribeChildChanges(rollingMemberPath, this);
-		zkClient.subscribeChildChanges(rollingMasterPath, this);
-		
-		if(!zkClient.exists(conf.getDedupRootPath())){
-			zkClient.createPersistent(conf.getDedupRootPath());
-			zkClient.createPersistent(dedupPostPath);
-			zkClient.createPersistent(dedupHourlyPath);
-			zkClient.createPersistent(dedupDailyPath);
-		}
-		
-		//dedup
-		zkClient.subscribeChildChanges(dedupPostPath, new IZkChildListener() {
-			@Override
-			public void handleChildChange(String parentPath, List<String> currentChilds)
-					throws Exception {
-				// TODO Auto-generated method stub
-				log.info("Post Mr Result is Duplicacted");
-								
-				log.info("Dedup List");
-				for(String dedup : currentChilds){
-					dedup = dedup.replace(":", "/");
-					log.info(dedup);
-				}
-				
-				PostDedupJob postDedupJob;
-				for(String dedup : currentChilds){
-					postDedupJob = new PostDedupJob(dedup);
-					postDedupJob.initDedupMr();
-					postDedupJob.movePostDedupMrData();
-					postDedupJob.runPostDedupMr();
-				}
-			}
-		});
-		
-		zkClient.subscribeChildChanges(dedupHourlyPath, new IZkChildListener() {
-			@Override
-			public void handleChildChange(String parentPath, List<String> currentChilds)
-					throws Exception {
-				// TODO Auto-generated method stub
-				log.info("Hourly Mr Result is Duplicacted");
-				log.info("Dedup List");
-				for(String dedup : currentChilds){
-					dedup = dedup.replace(":", "/");
-					log.info(dedup);
-				}	
-			}
-		});
-		
-		
-		zkClient.subscribeChildChanges(dedupDailyPath, new IZkChildListener() {
-			@Override
-			public void handleChildChange(String parentPath, List<String> currentChilds)
-					throws Exception {
-				// TODO Auto-generated method stub
-				log.info("Daily Mr Result is Duplicacted");
-				log.info("Dedup List");
-				for(String dedup : currentChilds){
-					dedup = dedup.replace(":", "/");
-					log.info(dedup);
-				}	
-			}
-		});
-		
+		zkClient.subscribeChildChanges(config.getZkMembersBase(), this);
+		zkClient.subscribeChildChanges(config.getZkMasterBase(), this);
 		try {
 			zkClient.getEventLock().lock();
-			
-			if (zkClient.exists(rollingConfigPath)) {
-				zkClient.subscribeDataChanges(rollingConfigPath, this);
-				config = this.zkClient.readData(rollingConfigPath);
-			}else{
+			if (zkClient.exists(config.getZkConfigBase())) {
+				zkClient.subscribeDataChanges(config.getZkConfigBase(), this);
+				config = this.zkClient.readData(config.getZkConfigBase());
 			}
-
-			if (config != null) {
-				configToObj(config);
-			}
-			
-			if(isMaster){
+			if (isMaster) {
 				startMaster();
 			}
-
-			log.info("Configuration " + rollingConfig.toString());
-
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -158,18 +54,16 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 	}
 	
 	@Override
-	public void handleChildChange(String parentPath, List<String> currentChilds)
-			throws Exception {
-		// TODO Auto-generated method stub
-		if(parentPath.equals(rollingMemberPath)){
+	public void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
+		if (parentPath.equals(config.getZkMembersBase())) {
 			log.info("Change MemberShip " + currentChilds.size());
-			for(String member : currentChilds){
+			for (String member : currentChilds) {
 				log.info("Memeber " + member);
 			}
-		}else if(parentPath.equals(rollingMasterPath)){
+		} else if (parentPath.equals(config.getZkMasterBase())) {
 			log.info("Master Node Change ");
 			masterRegister();
-			if(isMaster){
+			if (isMaster) {
 				startMaster();
 			}
 		}
@@ -177,38 +71,32 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 
 	@Override
 	public void handleDataChange(String dataPath, Object data) throws Exception {
-		// TODO Auto-generated method stub
-		configToObj(data.toString());
-		log.info(rollingConfig.toString());
-		if(isMaster){
+		if (dataPath.startsWith(config.getZkConfigBase())) {
+			config.setConfiguration(new String((byte[]) data));
+		}
+		if (isMaster) {
 			startMaster();
 		}
-			
 	}
 
 	@Override
 	public void handleDataDeleted(String dataPath) throws Exception {
-		// TODO Auto-generated method stub
 		log.info("Delete Path " + dataPath);
 	}
 
 	@Override
 	public void destroy() {
-		// TODO Auto-generated method stub
 	}
 
 	@Override
 	public void start() throws Exception {
-		// TODO Auto-generated method stub
-		context = new ClassPathXmlApplicationContext("spring.xml");
 	}
 
 	@Override
 	public void stop() throws Exception {
-		// TODO Auto-generated method stub
-		zkClient.delete(rollingMemberPath + "/" + hostName);
-		if(zkClient.exists(rollingMasterPath + "/" + hostName)){
-			zkClient.delete(rollingMasterPath + "/" + hostName);
+		zkClient.delete(config.getZkMemberNode(hostName));
+		if (zkClient.exists(config.getZkMasterNode(hostName))) {
+			zkClient.delete(config.getZkMasterNode(hostName));
 		}
 		log.info("Rolling Service Stop..");
 	}
@@ -222,14 +110,13 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 		}
 	}
 	
-	private void announceNode() throws RollingException{
+	private void announceNode() throws RollingException {
 		log.info("announce node  : " + hostName);
-		
-		if(!zkClient.exists(rollingMemberPath)){
-			zkClient.createPersistent(rollingMemberPath);
+		if (!zkClient.exists(config.getZkMembersBase())){
+			zkClient.createPersistent(config.getZkMembersBase());
 		}
 		
-	    String nodePath = rollingMemberPath + "/" + hostName;
+	    String nodePath = config.getZkMemberNode(hostName);
 	    if (zkClient.exists(nodePath)) {
 			zkClient.delete(nodePath);
 		}
@@ -237,112 +124,35 @@ public class RollingManagerImpl implements Daemon, RollingManager,
 	}
 	
 	
-	private void masterRegister(){
-		if(!zkClient.exists(rollingMasterPath)){
-			zkClient.createPersistent(rollingMasterPath);
+	private void masterRegister() {
+		if (!zkClient.exists(config.getZkMasterBase())) {
+			zkClient.createPersistent(config.getZkMasterBase());
 		}
-		if(zkClient.getChildren(rollingMasterPath).size() == 0){
-			zkClient.createEphemeral(rollingMasterPath + "/" + hostName);
+		
+		if (zkClient.getChildren(config.getZkMasterBase()).size() == 0) {
+			zkClient.createEphemeral(config.getZkMasterNode(hostName));
 			log.info("Master Node : " + hostName);
 		}
 		
-		if(zkClient.getChildren(rollingMasterPath).get(0).startsWith(hostName)){
-			log.info("Config : " + zkClient.getChildren(rollingMasterPath).get(0) + " hostName " + hostName);
+		if (zkClient.getChildren(config.getZkMasterBase()).get(0).startsWith(hostName)) {
+			log.info("Config : " + zkClient.getChildren(config.getZkMasterBase()).get(0) + " hostName " + hostName);
 			isMaster = true;
 		}
 	}
 	
-	private void configToObj(String config) {
-		rollingConfig = new RollingConfig();
-
-		StringTokenizer st = new StringTokenizer(config, "\n");
-		while (st.hasMoreTokens()) {
-			String value = st.nextToken();
-			if (value.startsWith(RollingConfig.RAW_PATH)) {
-				rollingConfig.setRawPath(value.substring(value.indexOf("=")+1,
-						value.length()).trim());
-			} else if (value.startsWith(RollingConfig.POST_MR_INPUT_PATH)) {
-				rollingConfig.setPostMrInputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.POST_MR_OUTPUT_PATH)) {
-				rollingConfig.setPostMrOutputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.POST_MR_RESULT_PATH)) {
-				rollingConfig.setPostMrResultPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.HOURLY_MR_INPUT_PATH)) {
-				rollingConfig.setHourlyMrInputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.HOURLY_MR_OUTPUT_PATH)) {
-				rollingConfig.setHourlyMrOutputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.HOURLY_MR_RESULT_PATH)) {
-				rollingConfig.setHourlyMrResultPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DAILY_MR_INPUT_PATH)) {
-				rollingConfig.setDailyMrInputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DAILY_MR_OUTPUT_PATH)) {
-				rollingConfig.setDailyMrOutputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DAILY_MR_RESULT_PATH)) {
-				rollingConfig.setDailyMrResultPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.RETRY_COUNT)) {
-				rollingConfig.setRetryCount(Integer.parseInt(value.substring(
-						value.indexOf("=")+1, value.length()).trim()));
-			} else if (value.startsWith(RollingConfig.RETRY_DELAY)) {
-				rollingConfig.setRetryDelaytime(Long.parseLong(value.substring(
-						value.indexOf("=")+1, value.length()).trim()));
-			} else if (value.startsWith(RollingConfig.NOTIFY_EMAIL)) {
-				rollingConfig.setNotifyEmail(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.POST_SCHEDULE)) {
-				rollingConfig.setPostSchedule(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.HOURLY_SCHEDULE)) {
-				rollingConfig.setHourlySchedule(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DAILY_SCHEDULE)) {
-				rollingConfig.setDailySchedule(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DEDUP_MR_INPUT_PATH)) {
-				rollingConfig.setDedupMrInputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DEDUP_MR_OUTPUT_PATH)) {
-				rollingConfig.setDedupMrOutputPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DEDUP_POST_PATH)) {
-				rollingConfig.setDedupPostPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DEDUP_HOURLY_PATH)) {
-				rollingConfig.setDedupHourlyPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			} else if (value.startsWith(RollingConfig.DEDUP_DAILY_PATH)) {
-				rollingConfig.setDedupDailyPath(value.substring(
-						value.indexOf("=")+1, value.length()).trim());
-			}
-		}
-	}
-	
-	private void startMaster(){
+	private void startMaster() {
 		log.info(hostName + " started as master");
 		try {
-			if(scheduler.getInstance().isStarted()){
+			if (RollingScheduler.getInstance().isStarted()){
 				scheduler.restartScheduler();
-			}else{
+			} else {
 				scheduler.startScheuler();
 			}
-			
-			scheduler.addDailyJobToScheduler(rollingConfig);
-			scheduler.addHourlyJobToScheduler(rollingConfig);
-			scheduler.addPostJobToScheduler(rollingConfig);
-			
+			scheduler.addDailyJobToScheduler(config);
+			scheduler.addHourlyJobToScheduler(config);
+			scheduler.addPostJobToScheduler(config);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-
-	
 }

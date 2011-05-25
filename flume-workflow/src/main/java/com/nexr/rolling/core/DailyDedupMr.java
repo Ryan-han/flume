@@ -21,7 +21,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.nexr.data.sdp.rolling.hdfs.LogRecord;
-import com.nexr.data.sdp.rolling.mr.DailyPartitioner;
+import com.nexr.rolling.workflow.mapred.DailyPartitioner;
 
 
 public class DailyDedupMr extends Configured implements Tool {

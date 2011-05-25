@@ -24,11 +24,11 @@ public class RunDedupMRTasklet extends RetryableDFSTaskletSupport {
 	@Override
 	protected String doRun(StepContext context) {
 		List<String> params = new ArrayList<String>();
-		params.add(context.get(DedupConstants.SOURCE_DIR, null) + File.separator + "*");
-		params.add(context.get(DedupConstants.NEW_SOURCE_DIR, null) + File.separator + "*");
+		params.add(context.get(DedupConstants.SOURCE_DIR, null) + "/*/data");
+		params.add(context.get(DedupConstants.NEW_SOURCE_DIR, null) + "/*/data");
 		params.add(context.get(DedupConstants.OUTPUT_PATH, null));
 
-		LOG.info("Running Dedup M/R Job");
+		LOG.info("Running Dedup M/R Job, Input: [{}, {}], Output: {}", params.toArray());
 		try {
 			String[] args = params.toArray(new String[params.size()]);
 			

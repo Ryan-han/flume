@@ -1,7 +1,6 @@
 package com.nexr.rolling.schd;
 
 import java.util.Date;
-import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.quartz.CronTrigger;
@@ -10,8 +9,7 @@ import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.SchedulerFactory;
 
-
-import com.nexr.rolling.core.RollingConfig;
+import com.nexr.sdp.Configuration;
 
 public class RollingScheduler {
 
@@ -29,7 +27,6 @@ public class RollingScheduler {
 			try {
 				sched = schedFact.getScheduler();
 			} catch (SchedulerException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -40,9 +37,8 @@ public class RollingScheduler {
 		try {
 			RollingScheduler.getInstance().start();
 			log.info("Start Scheduler");
-		} catch (SchedulerException e2) {
-			// TODO Auto-generated catch block
-			e2.printStackTrace();
+		} catch (SchedulerException e) {
+			throw e;
 		}
 	}
 
@@ -52,11 +48,11 @@ public class RollingScheduler {
 		startScheuler();
 	}
 	
-	public void addPostJobToScheduler(RollingConfig rollingConfig)
+	public void addPostJobToScheduler(Configuration config)
 			throws Exception {
 		String postScheduleName = "Post Rolling";
 		postJob = new JobDetail();
-		postJob.getJobDataMap().put("config", rollingConfig);
+		postJob.getJobDataMap().put("config", config);
 		
 		postJob.setName(postScheduleName);
 		postJob.setGroup(postScheduleName + " group");
@@ -70,20 +66,17 @@ public class RollingScheduler {
 		postCronTrigger.setStartTime(new Date());
 		
 		if (log.isInfoEnabled()) {
-			log.info("CRON_TYPE Expression : "
-					+ rollingConfig.getHourlySchedule());
+			log.info("CRON_TYPE Expression : " + config.getScheduleExpression("post"));
 		}
-		
-		postCronTrigger.setCronExpression(rollingConfig.getPostSchedule()
-				.trim());
+		postCronTrigger.setCronExpression(config.getScheduleExpression("post").trim());
 		getInstance().scheduleJob(postJob, postCronTrigger);
 	}
 	
-	public void addHourlyJobToScheduler(RollingConfig rollingConfig)
+	public void addHourlyJobToScheduler(Configuration config)
 			throws Exception {
 		String hourlyScheduleName = "Hourly Rolling";
 		hourlyJob = new JobDetail();
-		hourlyJob.getJobDataMap().put("config", rollingConfig);
+		hourlyJob.getJobDataMap().put("config", config);
 
 		hourlyJob.setName(hourlyScheduleName);
 		hourlyJob.setGroup(hourlyScheduleName + " group");
@@ -97,20 +90,17 @@ public class RollingScheduler {
 		hourlyCronTrigger.setStartTime(new Date());
 
 		if (log.isInfoEnabled()) {
-			log.info("CRON_TYPE Expression : "
-					+ rollingConfig.getHourlySchedule());
+			log.info("CRON_TYPE Expression : " + config.getScheduleExpression("hourly"));
 		}
-
-		hourlyCronTrigger.setCronExpression(rollingConfig.getHourlySchedule()
-				.trim());
+		hourlyCronTrigger.setCronExpression(config.getScheduleExpression("hourly").trim());
 		getInstance().scheduleJob(hourlyJob, hourlyCronTrigger);
 	}
 
-	public void addDailyJobToScheduler(RollingConfig rollingConfig)
+	public void addDailyJobToScheduler(Configuration config)
 			throws Exception {
 		String dailyScheduleName = "Daily Rolling";
 		dailyJob = new JobDetail();
-		dailyJob.getJobDataMap().put("config", rollingConfig);
+		dailyJob.getJobDataMap().put("config", config);
 
 		dailyJob.setName(dailyScheduleName);
 		dailyJob.setGroup(dailyScheduleName + " group");
@@ -123,12 +113,9 @@ public class RollingScheduler {
 		dailyCronTrigger.setJobGroup(dailyScheduleName + " group");
 		dailyCronTrigger.setStartTime(new Date());
 		if (log.isInfoEnabled()) {
-			log.info("CRON_TYPE Expression : "
-					+ rollingConfig.getDailySchedule());
+			log.info("CRON_TYPE Expression : " + config.getScheduleExpression("daily"));
 		}
-
-		dailyCronTrigger.setCronExpression(rollingConfig.getDailySchedule()
-				.trim());
+		dailyCronTrigger.setCronExpression(config.getScheduleExpression("daily").trim());
 		getInstance().scheduleJob(dailyJob, dailyCronTrigger);
 	}
 

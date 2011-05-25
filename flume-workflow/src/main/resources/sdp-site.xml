@@ -1,0 +1,81 @@
+<configuration>
+	<property>
+		<name>zk.servers</name>
+		<value>installer1:2181,installer2:2181,installer3:2181</value>
+	</property>
+	
+	<property>
+		<name>input.dir.name</name>
+		<value>input</value>
+	</property>
+	
+	<property>
+		<name>output.dir.name</name>
+		<value>output</value>
+	</property>
+	
+	<property>
+		<name>result.dir.name</name>
+		<value>result</value>
+	</property>
+	
+	<property>
+		<name>rolling.today.path</name>
+		<value>/rolling/today</value>
+	</property>
+	
+	<property>
+		<name>rolling.zk.path.base</name>
+		<value>/rolling</value>
+	</property>
+	
+	<property>
+		<name>dedup.zk.path.base</name>
+		<value>/dedup</value>
+	</property>
+	
+	<property>
+		<name>notify.zk.path.base</name>
+		<value>/collector</value>
+	</property>
+	
+	<property>
+		<name>collector.source.dir</name>
+		<value>/collector/source</value>
+	</property>
+	
+	<property>
+		<name>core.default.retry.count</name>
+		<value>10</value>
+	</property>
+	
+	<property>
+		<name>core.default.retry.strategy</name>
+		<value>exponential</value>
+	</property>
+	
+	<property>
+		<name>members.zk.path.base</name>
+		<value>/rolling/members</value>
+	</property>
+	
+	<property>
+		<name>master.zk.path.base</name>
+		<value>/rolling/master</value>
+	</property>
+	
+	<property>
+		<name>schedule.post</name>
+		<value>0 * * * * ?</value>
+	</property>
+
+	<property>
+		<name>schedule.hourly</name>
+		<value>0 0 * * * ?</value>
+	</property>
+	
+	<property>
+		<name>schedule.daily</name>
+		<value>0 0 0 * * ?</value>
+	</property>
+</configuration>

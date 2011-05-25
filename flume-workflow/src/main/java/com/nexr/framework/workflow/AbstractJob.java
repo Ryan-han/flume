@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.nexr.framework.workflow.listener.JobExecutionListener;
+import com.nexr.framework.workflow.listener.StepContextEventListener;
 import com.nexr.framework.workflow.listener.StepExecutionListener;
 
 /**
@@ -68,8 +69,19 @@ public abstract class AbstractJob implements Job {
 		executionDao.completeJob(execution);
 	}
 	
+	protected StepContext createContext(final JobExecution execution) {
+		StepContext context = execution.getContext();
+		context.setContextEventListener(new StepContextEventListener() {
+			@Override
+			public void commit(StepContext context) {
+				executionDao.updateJobExecution(execution);
+			}
+		});
+		return context;
+	}
+	
 	protected abstract void doExecute(JobExecution execution) throws JobExecutionException;
-
+	
 	@Override
 	public void addParameter(String name, String value) {
 		parameters.put(name, value);

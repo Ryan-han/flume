@@ -23,6 +23,9 @@ public class InitTasklet extends RetryableDFSTaskletSupport {
 		String input = context.getConfig().get(RollingConstants.INPUT_PATH, null);
 		String output = context.getConfig().get(RollingConstants.OUTPUT_PATH, null);
 		String result = context.getConfig().get(RollingConstants.RESULT_PATH, null);
+		String jobType = context.getConfig().get(RollingConstants.JOB_TYPE, null);
+		String key = context.getJobExecution().getKey();
+		LOG.info("Initialize Workflow. jobType: {}, jobId: {}", new Object[] { jobType, key });
 		
 		Path inputPath = new Path(input);
 		Path outputPath = new Path(output);
@@ -38,10 +41,9 @@ public class InitTasklet extends RetryableDFSTaskletSupport {
 		}
 		
 		context.set(RollingConstants.RAW_PATH, String.format("%s", raw));
-		context.set(RollingConstants.INPUT_PATH, String.format("%s/%s", input, context.getJobExecution().getKey()));
-		context.set(RollingConstants.OUTPUT_PATH, String.format("%s/%s", output, context.getJobExecution().getKey()));
+		context.set(RollingConstants.INPUT_PATH, String.format("%s/%s", input, key));
+		context.set(RollingConstants.OUTPUT_PATH, String.format("%s/%s", output, key));
 		context.set(RollingConstants.RESULT_PATH, String.format("%s", result));
-		LOG.info("Rolling Job Success Initialization : Input: " + inputPath.getName());
 		return "prepare";
 	}
 }

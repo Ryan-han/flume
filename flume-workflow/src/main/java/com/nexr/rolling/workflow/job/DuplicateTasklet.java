@@ -31,7 +31,7 @@ public class DuplicateTasklet extends RetryableDFSTaskletSupport {
 			client.createPersistentSequential(String.format("%s/job-", DEDUP_QUEUE), context.get(String.format("duplicated.%s", i), null));
 		}
 		try {
-			fs.delete(new Path(context.get(RollingConstants.OUTPUT_PATH, null)), true);
+			fs.delete(new Path(context.get(RollingConstants.INPUT_PATH, null)), true);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

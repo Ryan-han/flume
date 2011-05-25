@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.nexr.framework.workflow.listener.StepContextEventListener;
+
 /**
  * @author dani.kim@nexr.com
  */
@@ -11,6 +13,7 @@ public class StepContext {
 	private JobExecution jobExecution;
 	private Config config;
 	private Map<String, String> context;
+	private StepContextEventListener contextEventListener;
 	
 	public StepContext() {
 		context = new HashMap<String, String>();
@@ -22,6 +25,12 @@ public class StepContext {
 	
 	public void setJobExecution(JobExecution jobExecution) {
 		this.jobExecution = jobExecution;
+	}
+	
+	public void commit() {
+		if (contextEventListener != null) {
+			contextEventListener.commit(this);
+		}
 	}
 	
 	public Collection<String> keys() {
@@ -42,6 +51,10 @@ public class StepContext {
 	
 	public void set(String name, String value) {
 		context.put(name, value);
+	}
+
+	public void remove(String name) {
+		context.remove(name);
 	}
 	
 	public Config getConfig() {
@@ -106,5 +119,9 @@ public class StepContext {
 		public Collection<String> keys() {
 			return parameters.keySet();
 		}
+	}
+	
+	public void setContextEventListener(StepContextEventListener listener) {
+		this.contextEventListener = listener;
 	}
 }

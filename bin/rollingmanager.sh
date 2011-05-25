@@ -5,7 +5,7 @@ DAEMON_HOME=/usr/bin
 DAEMON_USER=root
 
 PID_FILE=/tmp/rollmgr.pid
-NWITTER_HOME=/mnt/nwitter/manager
+NWITTER_HOME=/mnt/icube-sc/flume
 
 CLASSPATH=""
 for f in $NWITTER_HOME/lib/*.jar; do

@@ -72,6 +72,7 @@ public class DailyOutputFormat<Text extends WritableComparable, LogRecord>
 	@Override
 	protected String generateFileNameForKeyValue(Text key,
 			LogRecord value, String name) {
+		System.out.println(value);
 		String dataType = key.toString().substring(key.toString().lastIndexOf("_")+1, key.toString().length());
 		String tmp = key.toString().substring(0, key.toString().lastIndexOf("_"));
 		String timeStamp = tmp.substring(tmp.lastIndexOf("_")+1, tmp.length());

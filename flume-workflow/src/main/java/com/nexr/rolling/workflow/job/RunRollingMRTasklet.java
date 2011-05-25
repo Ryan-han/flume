@@ -25,8 +25,11 @@ public class RunRollingMRTasklet extends RetryableDFSTaskletSupport {
 		List<String> params = new ArrayList<String>();
 		params.add(createInputPath(context.get(RollingConstants.INPUT_PATH, null), context.getInt(RollingConstants.INPUT_DEPTH, 1)));
 		params.add(context.get(RollingConstants.OUTPUT_PATH, null));
-
-		LOG.info("Running Rolling M/R Job. Input: {}, Output: {}", params.get(0), params.get(1));
+		
+		String jobType = context.getConfig().get(RollingConstants.JOB_TYPE, null);
+		LOG.info("Running Rolling M/R Job. jobType: {}, jobId: {}", jobType, context.getJobExecution().getKey());
+		LOG.info("Running Rolling M/R Input: {}, Output: {}", params.get(0), params.get(1));
+		
 		try {
 			String[] args = params.toArray(new String[params.size()]);
 			

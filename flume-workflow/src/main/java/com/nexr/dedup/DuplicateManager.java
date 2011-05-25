@@ -48,6 +48,7 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	public synchronized void run() {
 		while (running) {
 			if (queue.peek() == null) {
+				LOG.debug("Queue is empty.");
 				try {
 					wait();
 				} catch (InterruptedException e) {
@@ -59,6 +60,7 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	}
 	
 	private void execute(Duplication duplication) {
+		LOG.info("Start Dedup Job. {}", new Object[] { duplication.getPath() });
 		if (validateDedupJob(duplication)) {
 			DedupJob job = ctx.getBean(DedupJob.class);
 			job.addParameter(DedupConstants.JOB_TYPE, duplication.getType());
@@ -84,7 +86,7 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 		if (duplication.getType() == null) {
 			return false;
 		}
-		if (duplication.getType().length() > 1) {
+		if (duplication.getType().length() == 0) {
 			return false;
 		}
 		return true;
@@ -100,13 +102,15 @@ public class DuplicateManager implements Runnable, IZkChildListener {
 	
 	@Override
 	public synchronized void handleChildChange(String parentPath, List<String> currentChilds) throws Exception {
-		for (String child : currentChilds) {
-			if (!duplications.containsKey(child)) {
-				Object json = client.readData(String.format("%s/%s", DEDUP_QUEUE, child));
-				if (json != null) {
-					Duplication duplication = Duplication.JsonDeserializer.deserialize(json.toString());
-					queue.add(duplication);
-					duplications.put(child, duplication);
+		if (currentChilds != null) {
+			for (String child : currentChilds) {
+				if (!duplications.containsKey(child)) {
+					Object json = client.readData(String.format("%s/%s", DEDUP_QUEUE, child));
+					if (json != null) {
+						Duplication duplication = Duplication.JsonDeserializer.deserialize(json.toString());
+						queue.add(duplication);
+						duplications.put(child, duplication);
+					}
 				}
 			}
 		}

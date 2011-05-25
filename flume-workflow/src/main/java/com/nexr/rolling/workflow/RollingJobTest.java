@@ -5,12 +5,12 @@ import java.util.Date;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
-import com.nexr.data.sdp.rolling.mr.DailyRollingMr;
-import com.nexr.data.sdp.rolling.mr.HourlyRollingMr;
-import com.nexr.data.sdp.rolling.mr.PostRollingMr;
 import com.nexr.dedup.DuplicateManager;
 import com.nexr.framework.workflow.JobLauncher;
 import com.nexr.rolling.workflow.job.RollingJob;
+import com.nexr.rolling.workflow.mapred.DailyRollingMr;
+import com.nexr.rolling.workflow.mapred.HourlyRollingMr;
+import com.nexr.rolling.workflow.mapred.PostRollingMr;
 
 /**
  * @author dani.kim@nexr.com

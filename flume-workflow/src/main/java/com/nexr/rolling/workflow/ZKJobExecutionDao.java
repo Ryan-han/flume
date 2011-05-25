@@ -49,7 +49,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 	private static final String RUNNING = "/rolling/jobs/running";
 	private static final String OUTAGE = "/rolling/jobs/outage";
 
-	private Logger LOG = LoggerFactory.getLogger(ZKJobExecutionDao.class);
+	private Logger LOG = LoggerFactory.getLogger("zk.log");
 	
 	private ZkClient client = ZkClientFactory.getClient();
 	private RetryTemplate retryTemplate;
@@ -122,6 +122,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		context.setConfig(new Config(job.getParameters()));
 		
 		final JobExecution execution = new JobExecution(job);
+		context.setJobExecution(execution);
 		execution.setKey(key);
 		execution.setStatus(JobStatus.STARTING);
 		execution.setContext(context);
@@ -257,8 +258,17 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			execution.setJob(job);
 			execution.setStatus(JobStatus.valueOf(root.path("status").getTextValue()));
 			execution.setWorkflow(new Workflow(job.getSteps(), readSteps(root.path("workflow").path("footprints"))));
+
 			StepContext context = new StepContext();
+			context.setJobExecution(execution);
 			context.setConfig(new Config(job.getParameters()));
+			
+			ObjectNode contextNode = (ObjectNode) root.path("context");
+			names = contextNode.getFieldNames();
+			for (String name = null; names.hasNext(); ) {
+				name = names.next();
+				context.set(name, contextNode.path(name).getTextValue());
+			}
 			execution.setContext(context);
 			return execution;
 		} catch (Exception e) {

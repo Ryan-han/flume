@@ -28,36 +28,36 @@ public class ConfigUpdate {
 	private String rollingConfigPath = null;
 
 	public void updateConfig(String config) {
-		configFile = new File(config);
-		
-		rollingRootPath = conf.getRollingRootPath();
-		rollingConfigPath = conf.getRollingRootPath() + conf.getRollingConfigPath();
-		
-		try {
-			FileReader fileReader = new FileReader(configFile);
-			BufferedReader reader = new BufferedReader(fileReader);
-			String line = null;
-			contents = new StringBuilder();
-			while ((line = reader.readLine()) != null) {
-				contents.append(line + LINE_SEPERATOR);
-			}
-		
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		zkClient = new ZkClient(conf.getZookeeperServers(), 30000,
-				conf.getZookeeperSessionTimeout());
-		zkClient.getEventLock().lock();
-		if (!zkClient.exists(rollingRootPath)) {
-			zkClient.createPersistent(rollingRootPath);
-		}
-		if (!zkClient.exists(rollingConfigPath)) {
-			zkClient.createPersistent(rollingConfigPath, contents.toString());
-		} else {
-			zkClient.writeData(rollingConfigPath, contents.toString());
-		}
+//		configFile = new File(config);
+//		
+//		rollingRootPath = conf.getRollingRootPath();
+//		rollingConfigPath = conf.getRollingRootPath() + conf.getRollingConfigPath();
+//		
+//		try {
+//			FileReader fileReader = new FileReader(configFile);
+//			BufferedReader reader = new BufferedReader(fileReader);
+//			String line = null;
+//			contents = new StringBuilder();
+//			while ((line = reader.readLine()) != null) {
+//				contents.append(line + LINE_SEPERATOR);
+//			}
+//		
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//
+//		zkClient = new ZkClient(conf.getZookeeperServers(), 30000,
+//				conf.getZookeeperSessionTimeout());
+//		zkClient.getEventLock().lock();
+//		if (!zkClient.exists(rollingRootPath)) {
+//			zkClient.createPersistent(rollingRootPath);
+//		}
+//		if (!zkClient.exists(rollingConfigPath)) {
+//			zkClient.createPersistent(rollingConfigPath, contents.toString());
+//		} else {
+//			zkClient.writeData(rollingConfigPath, contents.toString());
+//		}
 		log.info("Configuration " + contents.toString());
 	}
 

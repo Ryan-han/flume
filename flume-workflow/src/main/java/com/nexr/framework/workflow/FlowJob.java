@@ -20,9 +20,7 @@ public class FlowJob extends AbstractJob {
 	
 	@Override
 	protected void doExecute(JobExecution execution) throws JobExecutionException {
-		StepContext context = new StepContext();
-		context.setJobExecution(execution);
-		context.setConfig(new StepContext.Config(getParameters()));
+		StepContext context = createContext(execution);
 	
 		Workflow workflow = execution.getWorkflow();
 		Steps steps = getSteps();

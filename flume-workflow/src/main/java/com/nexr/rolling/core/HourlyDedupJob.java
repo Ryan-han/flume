@@ -14,7 +14,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.util.ToolRunner;
 
-import com.nexr.data.sdp.rolling.mr.HourlyRollingMr;
+import com.nexr.rolling.workflow.mapred.HourlyRollingMr;
 
 public class HourlyDedupJob {
 	

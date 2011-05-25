@@ -64,181 +64,181 @@ public class RollingConfig {
 	
 	private String todayPath;
 
-	public String getRawPath() {
-		return rawPath;
-	}
-
-	public void setRawPath(String rawPath) {
-		this.rawPath = rawPath;
-	}
-
-	public String getHourlyMrResultPath() {
-		return hourlyMrResultPath;
-	}
-
-	public void setHourlyMrResultPath(String hourlyMrResultPath) {
-		this.hourlyMrResultPath = hourlyMrResultPath;
-	}
-
-	public String getHourlyMrInputPath() {
-		return hourlyMrInputPath;
-	}
-
-	public void setHourlyMrInputPath(String hourlyMrInputPath) {
-		this.hourlyMrInputPath = hourlyMrInputPath;
-	}
-
-	public String getHourlyMrOutputPath() {
-		return hourlyMrOutputPath;
-	}
-
-	public void setHourlyMrOutputPath(String hourlyMrOutputPath) {
-		this.hourlyMrOutputPath = hourlyMrOutputPath;
-	}
-
-	public String getDailyMrResultPath() {
-		return dailyMrResultPath;
-	}
-
-	public void setDailyMrResultPath(String dailyMrResultPath) {
-		this.dailyMrResultPath = dailyMrResultPath;
-	}
-
-	public String getDailyMrInputPath() {
-		return dailyMrInputPath;
-	}
-
-	public void setDailyMrInputPath(String dailyMrInputPath) {
-		this.dailyMrInputPath = dailyMrInputPath;
-	}
-
-	public String getDailyMrOutputPath() {
-		return dailyMrOutputPath;
-	}
-
-	public void setDailyMrOutputPath(String dailyMrOutputPath) {
-		this.dailyMrOutputPath = dailyMrOutputPath;
-	}
-
-	public int getRetryCount() {
-		return retryCount;
-	}
-
-	public void setRetryCount(int retryCount) {
-		this.retryCount = retryCount;
-	}
-
-	public long getRetryDelaytime() {
-		return retryDelaytime;
-	}
-
-	public void setRetryDelaytime(long retryDelaytime) {
-		this.retryDelaytime = retryDelaytime;
-	}
-
-	public String getNotifyEmail() {
-		return notifyEmail;
-	}
-
-	public void setNotifyEmail(String notifyEmail) {
-		this.notifyEmail = notifyEmail;
-	}
-
-	public String getHourlySchedule() {
-		return hourlySchedule;
-	}
-
-	public void setHourlySchedule(String hourlySchedule) {
-		this.hourlySchedule = hourlySchedule;
-	}
-
-	public String getDailySchedule() {
-		return dailySchedule;
-	}
-
-	public void setDailySchedule(String dailySchedule) {
-		this.dailySchedule = dailySchedule;
-	}
-
-	public String getPostMrResultPath() {
-		return postMrResultPath;
-	}
-
-	public void setPostMrResultPath(String postMrResultPath) {
-		this.postMrResultPath = postMrResultPath;
-	}
-
-	public String getPostMrInputPath() {
-		return postMrInputPath;
-	}
-
-	public void setPostMrInputPath(String postMrInputPath) {
-		this.postMrInputPath = postMrInputPath;
-	}
-
-	public String getPostMrOutputPath() {
-		return postMrOutputPath;
-	}
-
-	public void setPostMrOutputPath(String postMrOutputPath) {
-		this.postMrOutputPath = postMrOutputPath;
-	}
-
-	public String getPostSchedule() {
-		return postSchedule;
-	}
-
-	public void setPostSchedule(String postSchedule) {
-		this.postSchedule = postSchedule;
-	}
-
-	public String getDedupMrInputPath() {
-		return dedupMrInputPath;
-	}
-
-	public void setDedupMrInputPath(String dedupMrInputPath) {
-		this.dedupMrInputPath = dedupMrInputPath;
-	}
-
-	public String getDedupMrOutputPath() {
-		return dedupMrOutputPath;
-	}
-
-	public void setDedupMrOutputPath(String dedupMrOutputPath) {
-		this.dedupMrOutputPath = dedupMrOutputPath;
-	}
-
-	public String getDedupPostPath() {
-		return dedupPostPath;
-	}
-
-	public void setDedupPostPath(String dedupPostPath) {
-		this.dedupPostPath = dedupPostPath;
-	}
-
-	public String getDedupHourlyPath() {
-		return dedupHourlyPath;
-	}
-
-	public void setDedupHourlyPath(String dedupHourlyPath) {
-		this.dedupHourlyPath = dedupHourlyPath;
-	}
-
-	public String getDedupDailyPath() {
-		return dedupDailyPath;
-	}
-
-	public void setDedupDailyPath(String dedupDailyPath) {
-		this.dedupDailyPath = dedupDailyPath;
-	}
-	
-	public String getTodayPath() {
-		return todayPath;
-	}
-	
-	public void setTodayPath(String todayPath) {
-		this.todayPath = todayPath;
-	}
+//	public String getRawPath() {
+//		return rawPath;
+//	}
+//
+//	public void setRawPath(String rawPath) {
+//		this.rawPath = rawPath;
+//	}
+//
+//	public String getHourlyMrResultPath() {
+//		return hourlyMrResultPath;
+//	}
+//
+//	public void setHourlyMrResultPath(String hourlyMrResultPath) {
+//		this.hourlyMrResultPath = hourlyMrResultPath;
+//	}
+//
+//	public String getHourlyMrInputPath() {
+//		return hourlyMrInputPath;
+//	}
+//
+//	public void setHourlyMrInputPath(String hourlyMrInputPath) {
+//		this.hourlyMrInputPath = hourlyMrInputPath;
+//	}
+//
+//	public String getHourlyMrOutputPath() {
+//		return hourlyMrOutputPath;
+//	}
+//
+//	public void setHourlyMrOutputPath(String hourlyMrOutputPath) {
+//		this.hourlyMrOutputPath = hourlyMrOutputPath;
+//	}
+//
+//	public String getDailyMrResultPath() {
+//		return dailyMrResultPath;
+//	}
+//
+//	public void setDailyMrResultPath(String dailyMrResultPath) {
+//		this.dailyMrResultPath = dailyMrResultPath;
+//	}
+//
+//	public String getDailyMrInputPath() {
+//		return dailyMrInputPath;
+//	}
+//
+//	public void setDailyMrInputPath(String dailyMrInputPath) {
+//		this.dailyMrInputPath = dailyMrInputPath;
+//	}
+//
+//	public String getDailyMrOutputPath() {
+//		return dailyMrOutputPath;
+//	}
+//
+//	public void setDailyMrOutputPath(String dailyMrOutputPath) {
+//		this.dailyMrOutputPath = dailyMrOutputPath;
+//	}
+//
+//	public int getRetryCount() {
+//		return retryCount;
+//	}
+//
+//	public void setRetryCount(int retryCount) {
+//		this.retryCount = retryCount;
+//	}
+//
+//	public long getRetryDelaytime() {
+//		return retryDelaytime;
+//	}
+//
+//	public void setRetryDelaytime(long retryDelaytime) {
+//		this.retryDelaytime = retryDelaytime;
+//	}
+//
+//	public String getNotifyEmail() {
+//		return notifyEmail;
+//	}
+//
+//	public void setNotifyEmail(String notifyEmail) {
+//		this.notifyEmail = notifyEmail;
+//	}
+//
+//	public String getHourlySchedule() {
+//		return hourlySchedule;
+//	}
+//
+//	public void setHourlySchedule(String hourlySchedule) {
+//		this.hourlySchedule = hourlySchedule;
+//	}
+//
+//	public String getDailySchedule() {
+//		return dailySchedule;
+//	}
+//
+//	public void setDailySchedule(String dailySchedule) {
+//		this.dailySchedule = dailySchedule;
+//	}
+//
+//	public String getPostMrResultPath() {
+//		return postMrResultPath;
+//	}
+//
+//	public void setPostMrResultPath(String postMrResultPath) {
+//		this.postMrResultPath = postMrResultPath;
+//	}
+//
+//	public String getPostMrInputPath() {
+//		return postMrInputPath;
+//	}
+//
+//	public void setPostMrInputPath(String postMrInputPath) {
+//		this.postMrInputPath = postMrInputPath;
+//	}
+//
+//	public String getPostMrOutputPath() {
+//		return postMrOutputPath;
+//	}
+//
+//	public void setPostMrOutputPath(String postMrOutputPath) {
+//		this.postMrOutputPath = postMrOutputPath;
+//	}
+//
+//	public String getPostSchedule() {
+//		return postSchedule;
+//	}
+//
+//	public void setPostSchedule(String postSchedule) {
+//		this.postSchedule = postSchedule;
+//	}
+//
+//	public String getDedupMrInputPath() {
+//		return dedupMrInputPath;
+//	}
+//
+//	public void setDedupMrInputPath(String dedupMrInputPath) {
+//		this.dedupMrInputPath = dedupMrInputPath;
+//	}
+//
+//	public String getDedupMrOutputPath() {
+//		return dedupMrOutputPath;
+//	}
+//
+//	public void setDedupMrOutputPath(String dedupMrOutputPath) {
+//		this.dedupMrOutputPath = dedupMrOutputPath;
+//	}
+//
+//	public String getDedupPostPath() {
+//		return dedupPostPath;
+//	}
+//
+//	public void setDedupPostPath(String dedupPostPath) {
+//		this.dedupPostPath = dedupPostPath;
+//	}
+//
+//	public String getDedupHourlyPath() {
+//		return dedupHourlyPath;
+//	}
+//
+//	public void setDedupHourlyPath(String dedupHourlyPath) {
+//		this.dedupHourlyPath = dedupHourlyPath;
+//	}
+//
+//	public String getDedupDailyPath() {
+//		return dedupDailyPath;
+//	}
+//
+//	public void setDedupDailyPath(String dedupDailyPath) {
+//		this.dedupDailyPath = dedupDailyPath;
+//	}
+//	
+//	public String getTodayPath() {
+//		return todayPath;
+//	}
+//	
+//	public void setTodayPath(String todayPath) {
+//		this.todayPath = todayPath;
+//	}
 
 	@Override
 	public String toString() {

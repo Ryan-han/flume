@@ -25,15 +25,19 @@ public class FinishedTasklet extends RetryableDFSTaskletSupport {
 	
 	private StepContext.Config config;
 	private ZkClient client = ZkClientFactory.getClient();
+	
+	private String jobType;
+	private String zkRootPath;
 
 	@Override
 	protected String doRun(StepContext context) {
 		config = context.getConfig();
-		String jobType = context.getConfig().get(RollingConstants.JOB_TYPE, null);
+		zkRootPath = config.get(RollingConstants.NOTIFY_ZKPATH_AFTER_ROLLING, "/collector");
+		jobType = config.get(RollingConstants.JOB_TYPE, null);
 		if ("post".equals(jobType)) {
 			String sourcePath = context.get(RollingConstants.INPUT_PATH, null);
 			String today = context.getConfig().get(RollingConstants.TODAY_PATH, null);
-			LOG.info("Renaming (post rolling). source: {}, dest: {}", new Object[] { sourcePath, today });
+			LOG.info("Copy logs to today dir. source: {}, dest: {}", new Object[] { sourcePath, today });
 			if (sourcePath != null) {
 				try {
 					if (!fs.exists(new Path(today))) {
@@ -78,12 +82,11 @@ public class FinishedTasklet extends RetryableDFSTaskletSupport {
 			retryTemplate.execute(new RetryCallback<String>() {
 				@Override
 				public String doWithRetry(RetryContext context) throws Exception {
-					String rootPath = config.get(RollingConstants.NOTIFY_ZKPATH_AFTER_ROLLING, "/collector");
-					String type = config.get(RollingConstants.JOB_TYPE, "post");
-					String znode = String.format("%s/%s/%s", rootPath, type, file.getPath().getName());
+					String znode = String.format("%s/%s/%s", zkRootPath, jobType, file.getPath().getName());
 					if (!client.exists(znode)) {
-						client.createPersistent(znode, createJSON(destination));
+						client.createPersistent(znode, true);
 					}
+					client.writeData(znode, createJSON(new Path(destination, file.getPath().getName())));
 					return null;
 				}
 			});
@@ -94,6 +97,6 @@ public class FinishedTasklet extends RetryableDFSTaskletSupport {
 	}
 
 	protected String createJSON(Path destination) {
-		return String.format("[{\"path\":\"%s\"}]", destination.getName());
+		return String.format("[{\"path\":\"%s\"}]", destination.toString());
 	}
 }
