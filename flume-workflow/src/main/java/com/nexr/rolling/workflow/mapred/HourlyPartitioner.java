@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.nexr.data.sdp.rolling.mr;
+package com.nexr.rolling.workflow.mapred;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Partitioner;

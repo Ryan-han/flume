@@ -1,4 +1,4 @@
-package com.nexr.data.sdp.rolling.mr;
+package com.nexr.rolling.workflow.mapred;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;

@@ -1,4 +1,4 @@
-package com.nexr.data.sdp.rolling.mr;
+package com.nexr.rolling.workflow.mapred;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -33,16 +33,9 @@ public class DailyRollingMr extends Configured implements Tool {
 		public void map(LogRecordKey key, LogRecord val,
 				OutputCollector<Text, LogRecord> output, Reporter reporter)
 				throws IOException {
-			// TODO Auto-generated method stub
-//			Text lkey = (Text) (((com.nexr.data.sdp.rolling.hdfs.WriteableEventKey)key).getKey() + "_"
-//							+ ((com.nexr.data.sdp.rolling.hdfs.WriteableEventKey)key).getTimePartitioner() + "_"
-//							+ ((com.nexr.data.sdp.rolling.hdfs.WriteableEventKey)key).getDataType());
-			
-//			output.collect(lkey, val);
 			String mapKey = ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key).getLogId();
 			String time = ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key).getTime();
 			String type = ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key).getDataType();
-			
 			String lkey = mapKey+"_"+time+"_"+type;
 			Text lid = new Text(lkey.getBytes());
 			

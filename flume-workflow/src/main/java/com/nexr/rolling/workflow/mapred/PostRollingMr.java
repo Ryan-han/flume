@@ -1,4 +1,4 @@
-package com.nexr.data.sdp.rolling.mr;
+package com.nexr.rolling.workflow.mapred;
 
 import java.io.IOException;
 import java.util.Iterator;
