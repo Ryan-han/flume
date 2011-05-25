@@ -83,7 +83,8 @@ public class AgentFailChainSink extends EventSink.Base {
       break;
     }
     case CP: {
-    	String chains = AgentFailChainSink.genCPChain(thriftlist.toArray(new String[0]));
+    	String chains = AgentFailChainSink.genCPChain(thriftlist
+    			.toArray(new String[0]));
     	LOG.info("Setting failover chain to " + chains);
     	snk = new CompositeSink(context, chains);
     	break;
@@ -157,8 +158,18 @@ public class AgentFailChainSink extends EventSink.Base {
     return spec;
   }
   
+  /**
+   * Generate a checkpoint acking chain. 
+   * @param chain
+   * @return
+   */
   public static String genCPChain(String...chain) {
-	  String spec = "{ }";
+  	String body = " %s ";
+  	
+  	String spec = FailoverChainManager.genAvailableSinkSpec(body, Arrays.asList(chain));
+	  spec = String.format("{ checkpointInjector => { stubbornAppend => { insistentOpen => "
+	  		+ spec + "} } }");
+	  		LOG.info("Setting checkpoint failover chain to " + spec);
 	  return spec;
   }
 
