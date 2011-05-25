@@ -2,6 +2,7 @@ package com.nexr.rolling.workflow.job;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -35,12 +36,13 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 		Path sourcePath = new Path(context.get(RollingConstants.RAW_PATH, null));
 		try {
 			boolean isCollectorSource = context.getConfig().getBoolean(RollingConstants.IS_COLLECTOR_SOURCE, false);
-			AtomicInteger fileCount = new AtomicInteger();
-			int depth = renameTo(fs.listStatus(sourcePath), context.get(RollingConstants.INPUT_PATH, null), isCollectorSource, fileCount);
-			if (fileCount.intValue() == 0) {
-				LOG.info("Input Directory is empty.");
+			Stats stats = new Stats();
+			int depth = renameTo(fs.listStatus(sourcePath), context.get(RollingConstants.INPUT_PATH, null), isCollectorSource, stats);
+			if (stats.count.intValue() == 0) {
+				LOG.info("Input Directory is empty. Input: {}", sourcePath.toString());
 				return "cleanUp";
 			}
+			LOG.info("Prepare stats - count: {}, length: {} bytes", stats.count.intValue(), stats.length.longValue());
 			context.set(RollingConstants.INPUT_DEPTH, Integer.toString(depth));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -48,22 +50,28 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 		return "run";
 	}
 
-	private int renameTo(FileStatus[] files, String destination, boolean isCollectorSource, AtomicInteger fileCount) throws IOException {
+	private int renameTo(FileStatus[] files, String destination, boolean isCollectorSource, Stats stats) throws IOException {
 		int depth = 1;
 		if (files != null) {
 			for (FileStatus file : files) {
 				if (file.isDir()) {
-					depth += renameTo(fs.listStatus(file.getPath()), String.format("%s/%s", destination, file.getPath().getName()), isCollectorSource, fileCount);
+					depth += renameTo(fs.listStatus(file.getPath()), String.format("%s/%s", destination, file.getPath().getName()), isCollectorSource, stats);
 				} else {
 					Path destinationPath = new Path(destination);
 					if (!fs.exists(destinationPath)) {
 						fs.mkdirs(destinationPath);
 					}
 					fs.rename(file.getPath(), destinationPath);
-					fileCount.incrementAndGet();
+					stats.count.incrementAndGet();
+					stats.length.addAndGet(file.getLen());
 				}
 			}
 		}
 		return depth;
+	}
+	
+	public static class Stats {
+		AtomicInteger count = new AtomicInteger();
+		AtomicLong length = new AtomicLong();
 	}
 }

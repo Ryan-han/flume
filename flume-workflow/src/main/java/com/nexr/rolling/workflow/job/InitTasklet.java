@@ -1,10 +1,10 @@
 package com.nexr.rolling.workflow.job;
 
-import java.io.IOException;
-
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.batch.retry.RetryCallback;
+import org.springframework.batch.retry.RetryContext;
 
 import com.nexr.framework.workflow.StepContext;
 import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
@@ -27,16 +27,22 @@ public class InitTasklet extends RetryableDFSTaskletSupport {
 		String key = context.getJobExecution().getKey();
 		LOG.info("Initialize Workflow. jobType: {}, jobId: {}", new Object[] { jobType, key });
 		
-		Path inputPath = new Path(input);
-		Path outputPath = new Path(output);
+		final Path inputPath = new Path(input);
+		final Path outputPath = new Path(output);
 		try {
-			if (!fs.exists(inputPath)) {
-				fs.mkdirs(inputPath);
-			}
-			if (fs.exists(outputPath)) {
-				fs.delete(outputPath, true);
-			}
-		} catch (IOException e) {
+			retryTemplate.execute(new RetryCallback<String>() {
+				@Override
+				public String doWithRetry(RetryContext context) throws Exception {
+					if (!fs.exists(inputPath)) {
+						fs.mkdirs(inputPath);
+					}
+					if (fs.exists(outputPath)) {
+						fs.delete(outputPath, true);
+					}
+					return null;
+				}
+			});
+		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		

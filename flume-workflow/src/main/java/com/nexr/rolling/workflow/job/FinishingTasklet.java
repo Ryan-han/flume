@@ -129,12 +129,14 @@ public class FinishingTasklet extends RetryableDFSTaskletSupport {
 			FileStatus[] types = fs.listStatus(sourcePath);
 			int count = 0;
 			for (FileStatus type : types) {
-				FileStatus[] timegroups = fs.listStatus(type.getPath());
-				for (FileStatus timegroup : timegroups) {
-					if (timegroup.getPath().getName().split("_").length > 2) {
-						Source source = new Source(type.getPath().getName(), timegroup.getPath().getName(), fs.listStatus(timegroup.getPath(), SEQ_FILE_FILTER));
-						sources.addSource(source);
-						context.set(String.format("result.%s", count++), Source.JsonSerializer.serialize(source));
+				if (!type.getPath().getName().startsWith("_")) {
+					FileStatus[] timegroups = fs.listStatus(type.getPath());
+					for (FileStatus timegroup : timegroups) {
+						if (!timegroup.getPath().getName().startsWith("_")) {
+							Source source = new Source(type.getPath().getName(), timegroup.getPath().getName(), fs.listStatus(timegroup.getPath(), SEQ_FILE_FILTER));
+							sources.addSource(source);
+							context.set(String.format("result.%s", count++), Source.JsonSerializer.serialize(source));
+						}
 					}
 				}
 			}
