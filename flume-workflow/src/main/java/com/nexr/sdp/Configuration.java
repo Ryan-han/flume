@@ -88,6 +88,10 @@ public class Configuration extends com.nexr.framework.conf.Configuration {
 	public String getCollectorSource() {
 		return get("collector.source.path");
 	}
+	
+	public String getTodayPath() {
+		return get("rolling.today.path", String.format("%s/today", getRollingDir()));
+	}
 
 	public String getScheduleExpression(String type) {
 		return get(String.format("schedule.%s", type));
