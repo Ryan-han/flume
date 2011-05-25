@@ -27,23 +27,30 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.FileOutputCommitter;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobConfigurable;
+import org.apache.hadoop.mapred.RecordWriter;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
+import org.apache.hadoop.mapred.TaskAttemptContext;
+import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.lib.MultipleOutputFormat;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import com.nexr.data.sdp.rolling.hdfs.LogRecord;
-import com.nexr.data.sdp.rolling.hdfs.LogRecordKey;
 
-public class DailyOutputFormat<Text extends WritableComparable, LogRecord>
-		extends MultipleOutputFormat<Text, LogRecord> implements
+public class PostOutputFormat<LogRecordKey extends WritableComparable, LogRecord>
+		extends MultipleOutputFormat<LogRecordKey, LogRecord> implements
 		JobConfigurable {
 
-	static Logger log = Logger.getLogger(DailyOutputFormat.class);
-	SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd");
+	static Logger log = Logger.getLogger(PostOutputFormat.class);
+	SimpleDateFormat sdf = new SimpleDateFormat("yyyy_MM_dd_HH_mm");
 
 	private String prefix;
-	private MapFileOutputFormat output = new MapFileOutputFormat();
+	private SequenceFileOutputFormat<LogRecordKey, LogRecord> output = new SequenceFileOutputFormat();
 
+	@Override
 	public void configure(JobConf job) {
+		// TODO Auto-generated method stub
 		FileOutputCommitter committer = (FileOutputCommitter) job
 				.getOutputCommitter();
 		Path tempPath = null;
@@ -53,37 +60,34 @@ public class DailyOutputFormat<Text extends WritableComparable, LogRecord>
 					TaskAttemptID.forName(job.get("mapred.task.id")));
 			tempPath = committer.getTempTaskOutputPath(context);
 			prefix = tempPath.toString();
-			
-			prefix = prefix.substring(prefix.indexOf("_r_"), prefix.lastIndexOf("_"));
+
+			prefix = prefix.substring(prefix.indexOf("_r_"),
+					prefix.lastIndexOf("_"));
 			prefix = prefix.replace("_r_", "part-");
+			log.info(" part name -- " + prefix);
 		}
-		
-		log.info(" part name -- " + prefix);
-		
-	}
-	
-	@Override
-	public void checkOutputSpecs(FileSystem ignored, JobConf job) 
-    throws FileAlreadyExistsException, 
-           InvalidJobConfException, IOException {
-		
-	}
-	
-	@Override
-	protected String generateFileNameForKeyValue(Text key,
-			LogRecord value, String name) {
-		String dataType = key.toString().substring(key.toString().lastIndexOf("_")+1, key.toString().length());
-		String tmp = key.toString().substring(0, key.toString().lastIndexOf("_"));
-		String timeStamp = tmp.substring(tmp.lastIndexOf("_")+1, tmp.length());
-		return dataType+File.separator+ sdf.format(new Date(Long.parseLong(timeStamp)))+File.separator+prefix;
 	}
 
 	@Override
-	protected RecordWriter<Text, LogRecord> getBaseRecordWriter(
-			FileSystem fs, JobConf job, String name, Progressable progress)
-			throws IOException {
+	protected String generateFileNameForKeyValue(LogRecordKey key,
+			LogRecord chunk, String name) {
 
-		return (RecordWriter<Text, LogRecord>) output.getRecordWriter(
+		String time = ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key)
+				.getTime();
+		long t = Long.parseLong(time);
+		return ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key)
+				.getDataType()
+				+ File.separator
+				+ sdf.format(t)
+				+ File.separator + prefix;
+	}
+
+	@Override
+	protected RecordWriter<LogRecordKey, LogRecord> getBaseRecordWriter(FileSystem fs,
+			JobConf job, String name, Progressable progress) throws IOException {
+		// TODO Auto-generated method stub
+		return (RecordWriter<LogRecordKey, LogRecord>) output.getRecordWriter(
 				fs, job, name, progress);
 	}
+
 }
