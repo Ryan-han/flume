@@ -30,6 +30,7 @@ public class PostTask extends QuartzJobBean {
 		
 		job.addParameter(RollingConstants.JOB_TYPE, "post");
 		job.addParameter(RollingConstants.IS_COLLECTOR_SOURCE, "true");
+		job.addParameter(RollingConstants.TODAY_PATH, config.getTodayPath());
 		job.addParameter(RollingConstants.JOB_CLASS, job.getClass().getName());
 		job.addParameter(RollingConstants.MR_CLASS, PostRollingMr.class.getName());
 		job.addParameter(RollingConstants.DATETIME, new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date()));
