@@ -68,11 +68,7 @@ public class AgentSink extends EventSink.Base {
 
   final EventSink sink;
   
-  public AgentSink(Context ctx, String dsthost, int port, ReliabilityMode mode) throws FlumeSpecException {
-  	this(ctx, dsthost, port, mode, 0);
-  }
-  
-  public AgentSink(Context ctx, String dsthost, int port, ReliabilityMode mode, int batch)
+  public AgentSink(Context ctx, String dsthost, int port, ReliabilityMode mode) 
       throws FlumeSpecException {
     Preconditions.checkNotNull(dsthost);
 
@@ -135,13 +131,15 @@ public class AgentSink extends EventSink.Base {
     
     case CHECKPOINT: {
     	String snk = null;
-    	if(batch > 0) {
-    		snk = String.format("{ checkpointInjector => { batch(%s) => { stubbornAppend => " 
-      			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } } }", batch, dsthost, port);
-    	} else {
-    		snk = String.format("{ checkpointInjector => { stubbornAppend => " 
-      			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } }" , dsthost, port);
-    	}
+    	snk = String.format("checkpointInjector " + batchGzDeco 
+    			+ " stubbornAppend insistentOpen rpcSink(\"%s\", %d)", dsthost, port);
+//    	if(batch > 0) {
+//    		snk = String.format("{ checkpointInjector => { batch(%s) => { stubbornAppend => " 
+//      			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } } }", batch, dsthost, port);
+//    	} else {
+//    		snk = String.format("{ checkpointInjector => { stubbornAppend => " 
+//      			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } }" , dsthost, port);
+//    	}
     	sink = FlumeBuilder.buildSink(ctx, snk);
     	break;
     }
@@ -212,13 +210,12 @@ public class AgentSink extends EventSink.Base {
 
 		@Override
 		public EventSink build(Context context, String... argv) {
-			Preconditions.checkArgument(argv.length <= 3,
-					"usage: agentCheckpointSink(collectorHost, collectorPort[, 100])");
+			Preconditions.checkArgument(argv.length <= 2,
+					"usage: agentCheckpointSink(collectorHost[, port]{, " + BATCH_COUNT
+                + "=1}{, " + BATCH_MILLIS + "=0}{,compression=false})");
 	        FlumeConfiguration conf = FlumeConfiguration.get();
 	        String collector = conf.getCollectorHost();
 	        int port = conf.getCollectorPort();
-	        int batch = 0;
-	        
 	        if (argv.length >= 1) {
 	          collector = argv[0];
 	        }
@@ -227,13 +224,9 @@ public class AgentSink extends EventSink.Base {
 	          port = Integer.parseInt(argv[1]);
 	        }
 	        
-	        if (argv.length >=3) {
-	        	batch = Integer.parseInt(argv[2]);
-	        }
-	        
 	        try {
 	        	return new AgentSink(context, collector, port,
-	        			ReliabilityMode.CHECKPOINT, batch);
+	        			ReliabilityMode.CHECKPOINT);
 	        } catch (FlumeSpecException e) {
 	        	LOG.error("AgentSink spec error " + e, e);
 	        	throw new IllegalArgumentException();

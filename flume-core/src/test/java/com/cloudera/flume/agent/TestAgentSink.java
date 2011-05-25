@@ -153,14 +153,14 @@ public class TestAgentSink {
   
   @Test
   public void testCheckpointBuilder() throws FlumeSpecException {
-//  	snk = String.format("{ checkpointInjector => { batch(%s) => { stubbornAppend => " 
-//  			+ "{ insistentOpen => rpcSink(\"%s\", %d)} } } }", batch, dsthost, port);
-//  	String snk = " agentCPSink(\"localhost\", 12345)";
-//		FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk);
-		
-		String snk1 = "agentCPSink(\"localhost\", 12345, 100)";
-		EventSink s = FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk1);
-		System.out.println("");
+  	String snk0 = "agentCPSink";
+		FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk0);
+  	
+  	String snk1 = "agentCPSink(\"localhost\")";
+		FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk1);
+  	
+		String snk2 = "agentCPSink(\"localhost\", 12345)";
+		FlumeBuilder.buildSink(new LogicalNodeContext("pNode", "lNode"), snk2);
   }
   
   /**
