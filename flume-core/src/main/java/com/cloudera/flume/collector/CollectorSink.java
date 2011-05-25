@@ -40,6 +40,8 @@ import com.cloudera.flume.core.Event;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.core.EventSinkDecorator;
 import com.cloudera.flume.core.MaskDecorator;
+import com.cloudera.flume.handlers.batch.GunzipDecorator;
+import com.cloudera.flume.handlers.batch.UnbatchingDecorator;
 import com.cloudera.flume.handlers.debug.InsistentAppendDecorator;
 import com.cloudera.flume.handlers.debug.InsistentOpenDecorator;
 import com.cloudera.flume.handlers.debug.StubbornAppendSink;
@@ -76,7 +78,7 @@ public class CollectorSink extends EventSink.Base {
   // This is a container for acks that should be ready for delivery when the
   // hdfs sink is closed/flushed
   Set<String> rollAckSet = new HashSet<String>();
-  
+
   // References package exposed for testing
   final RollSink roller;
 
@@ -84,7 +86,7 @@ public class CollectorSink extends EventSink.Base {
       throws FlumeSpecException {
     this(ctx, snkSpec, millis, new ProcessTagger(), 250, ackDest);
   }
-  
+
   CollectorSink(Context ctx, final String snkSpec, final long millis,
       final Tagger tagger, long checkmillis, AckListener ackDest) {
     this.ackDest = ackDest;
@@ -119,21 +121,16 @@ public class CollectorSink extends EventSink.Base {
     // needs an extra mask before rolling, writing to disk and forwarding acks
     // (roll detect).
 
-    // { ackChecksumChecker => insistentAppend => stubbornAppend =>
-    // insistentOpen => mask("rolltag") => roll(xx) { rollDetect =>
-    // subsink } }
-   
-    // or (use checkpoint)
-    
-    // { checkpointChecker => insistentAppend => stubbornAppend =>
-    // insistentOpen => mask("rolltag") => roll(xx) { rollDetect =>
-    // subsink } }
+    // gunzip unbatch ackChecksumChecker insistentAppend stubbornAppend
+    // insistentOpen mask("rolltag") roll(xx) { rollDetect subsink }
+
     EventSink tmp = new MaskDecorator<EventSink>(roller, "rolltag");
     tmp = new InsistentOpenDecorator<EventSink>(tmp, backoff1);
     tmp = new StubbornAppendSink<EventSink>(tmp);
     tmp = new InsistentAppendDecorator<EventSink>(tmp, backoff2);
-    
-    snk = new AckChecksumChecker<EventSink>(tmp, accum);
+    tmp = new AckChecksumChecker<EventSink>(tmp, accum);
+    tmp = new UnbatchingDecorator<EventSink>(tmp);
+    snk = new GunzipDecorator<EventSink>(tmp);
   }
 
   /**
@@ -222,7 +219,7 @@ public class CollectorSink extends EventSink.Base {
     }
 
   };
-  
+
   @Override
   public void append(Event e) throws IOException, InterruptedException {
     snk.append(e);

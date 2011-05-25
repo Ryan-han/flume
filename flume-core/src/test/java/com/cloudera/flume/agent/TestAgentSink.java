@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.cloudera.flume.conf.Context;
+import com.cloudera.flume.conf.FlumeArgException;
 import com.cloudera.flume.conf.FlumeBuilder;
 import com.cloudera.flume.conf.FlumeConfiguration;
 import com.cloudera.flume.conf.FlumeSpecException;
@@ -83,8 +84,38 @@ public class TestAgentSink {
   }
 
   @Test
+  public void testBatchCompressBuilder() throws FlumeSpecException {
+    String snk1 = "agentSink(\"localhost\", 12345, compression=true)";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk1);
+
+    String snk2 = "agentSink(\"localhost\", 12345, batchCount=100 )";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk2);
+
+    String snk3 = "agentSink(\"localhost\", 12345, batchMillis=1000 )";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk3);
+
+    String snk4 = "agentSink(\"localhost\", 12345, batchCount=100, batchMillis=1000)";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk4);
+
+    String snk5 = "agentSink(\"localhost\", 12345, batchCount=100, batchMillis=1000, compression=true)";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk5);
+  }
+
+  @Test(expected = FlumeArgException.class)
+  public void testBadBatchCompressBuilder() throws FlumeSpecException {
+    String snk1 = "agentSink(\"localhost\", 12345, batchCount=true)";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk1);
+  }
+
+  @Test(expected = FlumeArgException.class)
+  public void testBadBatchCompressBuilder2() throws FlumeSpecException {
+    String snk1 = "agentSink(\"localhost\", 12345, batchMillis=1000, batchCount=true)";
+    FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk1);
+  }
+
+  @Test
   public void testDiskFailoverBuilder() throws FlumeSpecException {
-    String snk = " agentFailoverSink";
+    String snk = "agentFailoverSink";
     FlumeBuilder.buildSink(LogicalNodeContext.testingContext(), snk);
 
     String snk2 = "agentFailoverSink(\"localhost\")";
@@ -143,15 +174,17 @@ public class TestAgentSink {
       InterruptedException {
     String snkcfg = "agentSink(\"localhost\", 12345)";
 
-    EventSource src = FlumeBuilder.buildSource(LogicalNodeContext
-        .testingContext(), "collectorSource(12345)");
+    EventSource src = FlumeBuilder.buildSource(
+        LogicalNodeContext.testingContext(), "collectorSource(12345)");
     src.open();
 
-    for (int i = 0; i < 100; i++) {
-      EventSink snk = FlumeBuilder.buildSink(LogicalNodeContext
-          .testingContext(), snkcfg);
+    for (int i = 0; i < 20; i++) {
+      EventSink snk = FlumeBuilder.buildSink(
+          LogicalNodeContext.testingContext(), snkcfg);
       snk.open();
       snk.close();
     }
+
   }
+
 }
