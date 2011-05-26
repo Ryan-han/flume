@@ -39,6 +39,7 @@ import com.cloudera.flume.conf.Context;
 import com.cloudera.flume.conf.FlumeBuilder;
 import com.cloudera.flume.conf.FlumeSpecException;
 import com.cloudera.flume.conf.LogicalNodeContext;
+import com.cloudera.flume.core.Driver;
 import com.cloudera.flume.core.Event;
 import com.cloudera.flume.core.EventSink;
 import com.cloudera.flume.core.EventSinkDecorator;
@@ -50,6 +51,7 @@ import com.cloudera.flume.reporter.aggregator.AccumulatorSink;
 import com.cloudera.util.Clock;
 import com.cloudera.util.FileUtil;
 import com.cloudera.util.OSUtils;
+import com.ibm.icu.util.Calendar;
 
 /**
  * This class tests the tail dir source. It looks at a local file system and
@@ -95,6 +97,7 @@ public class TestTailDirSource {
     // false
     FlumeBuilder.buildSource(ctx, src + ", true,2)"); // recursively w/
     // max-depth 2
+    
     FileUtil.rmr(tmpdir);
   }
   
@@ -112,6 +115,12 @@ public class TestTailDirSource {
 	    // false
 	    FlumeBuilder.buildSource(ctx, src + ", true,2)"); // recursively w/
 	    // max-depth 2
+	    
+	    String src2 = "checkpointTailDir(\"" 
+	    		+ StringEscapeUtils.escapeJava(tmpdir.getAbsolutePath())
+	    		+ "\", \"foo.*\", timeLimit=3600)";
+	    FlumeBuilder.buildSource(ctx, src2);
+	    
 	    FileUtil.rmr(tmpdir);  
   }
 
@@ -124,6 +133,51 @@ public class TestTailDirSource {
         + "\", \"\\x.*\")";
     FlumeBuilder.buildSource(ctx, src);
     FileUtil.rmr(tmpdir);
+  }
+  
+  @Test
+  public void testTimeLimit() throws IOException, FlumeSpecException, InterruptedException {
+  	File tmpdir = FileUtil.mktempdir();
+
+  	File[] oldFiles = new File[2];
+  	
+  	Calendar beforeOneHour = Calendar.getInstance();
+  	beforeOneHour.setTimeInMillis(beforeOneHour.getTimeInMillis() - ( 60 * 60 * 1000) );
+  	
+  	for(int i=0; i<2; i++) {
+  		oldFiles[i] = new File(tmpdir, "oldfile"+i);
+  		oldFiles[i].createNewFile();
+  		FileWriter out = new FileWriter(oldFiles[i]);
+  		out.write("oldfile\n");
+  		out.flush();
+  		out.close();
+  		oldFiles[i].setLastModified(beforeOneHour.getTimeInMillis());
+  	}
+  	
+  	File[] recentFiles = new File[2];
+  	for(int i=0; i<2; i++) {
+  		recentFiles[i] = new File(tmpdir, "recentfile"+i);
+  		recentFiles[i].createNewFile();
+  		FileWriter out = new FileWriter(recentFiles[i]);
+  		out.write("newfile\n");
+  		out.flush();
+  		out.close();
+  	}
+  	
+  	String src = "checkpointTailDir(\""+ tmpdir.getAbsolutePath() +"\", timeLimit=1800)";
+  	EventSource source = FlumeBuilder.buildSource(LogicalNodeContext.testingContext(), src);
+  	AccumulatorSink sink = new AccumulatorSink("foo");
+  	
+  	Driver driver = new DirectDriver(source, sink);
+  	driver.start();
+  	
+  	Clock.sleep(3000);
+  	
+  	Assert.assertEquals(4, sink.getCount());
+  	
+  	driver.stop();
+  	
+  	FileUtil.rmr(tmpdir);
   }
 
   void genFiles(File tmpdir, String prefix, int files, int lines)
@@ -138,9 +192,9 @@ public class TestTailDirSource {
     }
   }
   
-  List<String> genFilesWithFixedContent(File tmpdir, String prefix, int files, int lines) throws IOException {
+  List<String> genFilesWithFixedContent(File tmpdir, String prefix, int fileNum, int lines) throws IOException {
 	  List<String> fileNames = new ArrayList<String>();
-	  for (int i = 0; i < files; i++) {
+	  for (int i = 0; i < fileNum; i++) {
 	      File tmpfile = File.createTempFile(prefix, "bar", tmpdir);
 	      fileNames.add(tmpfile.getName());
 	      PrintWriter pw = new PrintWriter(tmpfile);
@@ -193,18 +247,6 @@ public class TestTailDirSource {
   }
   
   @Test
-	public void testDelimitedTextUsingBuilder() throws Exception {
-		File tmpdir = FileUtil.mktempdir();
-		String src = "tailDir(\"/home/dgkim84/SdpLogGen/temp/Transaction\", \".*\", false, 0, delim=\"</TransactionLog>\", delimMode=\"prev\")";
-		Context ctx = LogicalNodeContext.testingContext();
-	
-		EventSource source = FlumeBuilder.buildSource(ctx, src);
-		source.open();
-		System.out.println(new String(source.next().getBody()));
-		source.close();
-  }
-  
-  @Test
   public void testDelimitedTextSource() throws Exception {
 	  File tmpdir = FileUtil.mktempdir();
 	  TailDirSource src = new TailDirSource(tmpdir, ".*", false, 0, "</Peoples>", DelimMode.INCLUDE_PREV);
@@ -220,9 +262,11 @@ public class TestTailDirSource {
   @Test
   public void testCheckpointFiles() throws IOException, InterruptedException {
 	  File tmpdir = FileUtil.mktempdir();
-	  TailDirSource src = new TailDirSource(tmpdir, ".*");
+	  TailDirSource src = (TailDirSource) TailDirSource.checkPointBuilder().build(LogicalNodeContext.testingContext(), tmpdir.getAbsolutePath());
+//	  TailDirSource src = new TailDirSource(tmpdir, ".*");
 	  DummyCheckPointManager dcpManager = new DummyCheckPointManager();
 	  
+	  //"0123456789\n" 라인이 100줄인 파일 10개를 만든다. 
 	  List<String> fileNames = genFilesWithFixedContent(tmpdir, "foo", 10, 100);
 	  
 	  Map<String, Long> checkPointMap = new HashMap<String, Long>();
@@ -232,31 +276,23 @@ public class TestTailDirSource {
 	  dcpManager.setCheckPointMap(checkPointMap);
 	  src.setCheckPointManager(dcpManager);
 	  src.initCheckPoint("dummy");
-
-	  
 	  
 	  AccumulatorSink cnt = new AccumulatorSink("tailcount");
 	  
 	  EventSinkDecorator<EventSink> eventSinkDecorator = new EventSinkDecorator<EventSink>(cnt) {
-
-		@Override
-		public void append(Event e) throws IOException, InterruptedException {
-			if(e.get(TailSource.A_TAILSRCOFFSET) != null) {
-				return;
+			@Override
+			public void append(Event e) throws IOException, InterruptedException {
+				if(e.get(TailSource.A_TAILSRCOFFSET) != null) {
+					return;
+				}
+				super.append(e);
 			}
-			super.append(e);
-		}
-		  
 	  };
 	  
-	  src.open();
-	  eventSinkDecorator.open();
 	  DirectDriver drv = new DirectDriver(src, eventSinkDecorator);
 	  
 	  drv.start();
-	  
 	  Clock.sleep(1000);
-	  
 	  assertEquals(500, cnt.getCount());
 	  
 	  System.out.println("cntCount : " + cnt.getCount());
@@ -264,7 +300,6 @@ public class TestTailDirSource {
 	  src.close();
 	  eventSinkDecorator.close();
 	  FileUtil.rmr(tmpdir);
-	  
   }
 
   /**

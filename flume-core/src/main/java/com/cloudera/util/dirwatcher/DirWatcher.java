@@ -46,6 +46,8 @@ public class DirWatcher {
   private long sleep_ms;
   private Periodic thread;
   private FileFilter filter;
+  
+	private long limit = 0l;
 
   /**
    * checkperiod is the amount of time in milliseconds between directory polls.
@@ -58,6 +60,11 @@ public class DirWatcher {
     this.dir = dir;
     this.sleep_ms = checkPeriod;
     this.filter = filter;
+  }
+  
+  public DirWatcher(File dir, FileFilter filter, long checkPeriod, long limit) {
+  	this(dir, filter, checkPeriod);
+  	this.limit = limit;
   }
 
   /**
@@ -126,7 +133,21 @@ public class DirWatcher {
    * and fires events based on changes.
    */
   public void check() {
-    File[] files = dir.listFiles();
+//    File[] files = dir.listFiles();
+  	File[] files = dir.listFiles(new java.io.FileFilter() {
+  		
+			@Override
+			public boolean accept(File pathname) {
+				if(pathname.isDirectory()) {
+					return true;
+				} else if(limit <= 0 || (System.currentTimeMillis() - pathname.lastModified()) < limit) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		});
+    
     if (files == null) { // directory is no longer present
       LOG.info("dir " + dir.getAbsolutePath() + " does not exist!");
       // notifying about files deletion in case there were any

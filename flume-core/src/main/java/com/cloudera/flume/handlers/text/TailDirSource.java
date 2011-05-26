@@ -49,7 +49,7 @@ import com.nexr.agent.cp.CheckPointManager;
  */
 public class TailDirSource extends EventSource.Base {
   public static final Logger LOG = LoggerFactory.getLogger(TailDirSource.class);
-  public static final String USAGE = "usage: tailDir(\"dirname\"[, fileregex=\".*\"[, startFromEnd=false[, recurseDepth=0]]])";
+  public static final String USAGE = "usage: tailDir(\"dirname\"[, fileregex=\".*\"[, startFromEnd=false[, recurseDepth=0]] , timeLimit==3600])";
   private DirWatcher watcher;
   private ConcurrentMap<String, DirWatcher> subdirWatcherMap;
   private TailSource tail;
@@ -63,7 +63,8 @@ public class TailDirSource extends EventSource.Base {
   
   private CheckPointManager checkPointManager;
   private Map<String, Long> checkPointOffsetMap;
-  
+
+  public static final String TIME_LIMIT = "timeLimit";
 
   // Indicates whether dir was checked. It is false before source is open
   // and set to true after the first check of a dir
@@ -81,6 +82,10 @@ public class TailDirSource extends EventSource.Base {
   final public static String A_SUBDIRSDELETED = "subdirsDeleted";
 
   private boolean useCheckpoint = false;
+	/**
+	 * timeLimit(ms) 에 해당 되는 시간이 지난 파일들은 Tailing되지 않는다
+	 */
+  private long timeLimit = 0;
   
   public TailDirSource(File f, String regex) {
     this(f, regex, false);
@@ -154,7 +159,7 @@ public class TailDirSource extends EventSource.Base {
   private DirWatcher createWatcher(File dir, final String regex,
       final int recurseDepth) {
     // 250 ms between checks
-    DirWatcher watcher = new DirWatcher(dir, new RegexFileFilter(regex), 250);
+    DirWatcher watcher = new DirWatcher(dir, new RegexFileFilter(regex), 250, timeLimit );
     watcher.addHandler(new DirChangeHandler() {
       Map<String, Cursor> curmap = new HashMap<String, Cursor>();
 
@@ -410,6 +415,10 @@ public class TailDirSource extends EventSource.Base {
 	    	            recurseDepth);
 	        }
 	        
+	        if(ctx.getValue(TIME_LIMIT) != null) {
+	        	source.setTimeLimit(Long.parseLong(ctx.getValue(TIME_LIMIT)));
+	        }
+	        
 	        String logicalNodeName = ctx.getValue(LogicalNodeContext.C_LOGICAL);
 	        Preconditions.checkArgument(logicalNodeName != null,
             "Context does not have a logical node name");
@@ -419,7 +428,11 @@ public class TailDirSource extends EventSource.Base {
 	  };
   }
 
-  public void setCheckPointManager(CheckPointManager checkpointManager) {
+  protected void setTimeLimit(long timeLimit) {
+  	this.timeLimit = timeLimit*1000;
+	}
+
+	public void setCheckPointManager(CheckPointManager checkpointManager) {
 	this.checkPointManager = checkpointManager;
   }
 }
