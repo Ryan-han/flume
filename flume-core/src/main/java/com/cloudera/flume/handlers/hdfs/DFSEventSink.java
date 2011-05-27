@@ -167,6 +167,7 @@ public class DFSEventSink extends EventSink.Base {
         	} else {
         		newPath = new Path(e.getKey() + ".done");
         	}
+        	LOG.info("rename [" + new Path(e.getKey()) + "] -> [" + newPath + "]");
         	hdfs.rename(new Path(e.getKey()), newPath);
         }
         
@@ -187,6 +188,7 @@ public class DFSEventSink extends EventSink.Base {
       	} else {
       		newPath = new Path(this.path + ".done");
       	}
+      	LOG.info("rename [" + dstPath + "] -> [" + newPath + "]");
         hdfs.rename(dstPath, newPath);
       }
 
