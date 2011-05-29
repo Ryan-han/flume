@@ -64,10 +64,10 @@ public abstract class RetryableDFSTaskletSupport implements Tasklet {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
-			try {
-				fs.close();
-			} catch (IOException e) {
-			}
+//			try {
+//				fs.close();
+//			} catch (IOException e) {
+//			}
 		}
 	}
 

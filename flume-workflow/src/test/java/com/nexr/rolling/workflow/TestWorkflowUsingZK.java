@@ -49,7 +49,7 @@ public class TestWorkflowUsingZK extends JobTestBase {
 		job.addParameter("param2", "2");
 		job.addParameter("time", System.currentTimeMillis() + "");
 		launcher.run(job);
-		executionDao.removeJob(job);
+		executionDao.removeJob("/complete", job);
 	}
 	
 	@Test

@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Date;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -74,12 +75,17 @@ public class PostOutputFormat<LogRecordKey extends WritableComparable, LogRecord
 
 		String time = ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key)
 				.getTime();
-		long t = Long.parseLong(time);
+		long t = 0;
+		try {
+			t = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").parse(time).getTime();
+		} catch (ParseException e) {
+			t = Long.parseLong(time);
+		}
 		return ((com.nexr.data.sdp.rolling.hdfs.LogRecordKey) key)
-				.getDataType()
-				+ File.separator
-				+ sdf.format(t)
-				+ File.separator + prefix;
+			.getDataType()
+			+ File.separator
+			+ sdf.format(t)
+			+ File.separator + prefix;
 	}
 
 	@Override

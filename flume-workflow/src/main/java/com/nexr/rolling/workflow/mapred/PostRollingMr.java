@@ -59,7 +59,7 @@ public class PostRollingMr extends Configured implements Tool {
 		jobConf.setOutputFormat(PostOutputFormat.class);
 		jobConf.setOutputKeyClass(LogRecordKey.class);
 		jobConf.setOutputValueClass(LogRecord.class);
-		jobConf.setNumReduceTasks(3);
+		jobConf.setNumReduceTasks(Integer.parseInt(args[2]));
 		FileInputFormat.setInputPaths(jobConf, args[0]);
 		FileOutputFormat.setOutputPath(jobConf, new Path(args[1]));
 		JobClient.runJob(jobConf);

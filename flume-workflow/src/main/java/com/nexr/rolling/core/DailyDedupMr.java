@@ -63,7 +63,7 @@ public class DailyDedupMr extends Configured implements Tool {
 		jobConf.setOutputValueClass(LogRecord.class);
 		jobConf.setMapOutputValueClass(LogRecord.class);
 		jobConf.setMapOutputKeyClass(Text.class);
-		jobConf.setNumReduceTasks(3);
+		jobConf.setNumReduceTasks(Integer.parseInt(args[3]));
 //		FileInputFormat.setInputPaths(jobConf, args[0]);
 		FileInputFormat.addInputPath(jobConf, new Path(args[0]));
 		FileInputFormat.addInputPath(jobConf, new Path(args[1]));

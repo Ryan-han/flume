@@ -17,15 +17,15 @@ import com.nexr.framework.workflow.JobExecutionException;
 import com.nexr.framework.workflow.JobLauncher;
 import com.nexr.rolling.workflow.ZkClientFactory;
 import com.nexr.rolling.workflow.job.Duplication;
+import com.nexr.sdp.Configuration;
 
 /**
  * @author dani.kim@nexr.com
  */
 public class DedupManager implements Runnable, IZkChildListener {
-	private static final String DEDUP_QUEUE = "/dedup/queue";
-	
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 	
+	private Configuration config = Configuration.getInstance();
 	private ZkClient client = ZkClientFactory.getClient();
 	private ClassPathXmlApplicationContext ctx;
 	private JobLauncher launcher;
@@ -38,7 +38,7 @@ public class DedupManager implements Runnable, IZkChildListener {
 	public DedupManager() {
 		queue = new LinkedBlockingQueue<Duplication>();
 		duplications = new ConcurrentHashMap<String, Duplication>();
-		client.subscribeChildChanges(DEDUP_QUEUE, this);
+		client.subscribeChildChanges(config.getZkDedupQueue(), this);
 		
 		ctx = new ClassPathXmlApplicationContext("classpath:workflow-app.xml");
 		launcher = ctx.getBean(JobLauncher.class);
@@ -64,11 +64,14 @@ public class DedupManager implements Runnable, IZkChildListener {
 		if (validateDedupJob(duplication)) {
 			DedupJob job = ctx.getBean(DedupJob.class);
 			job.addParameter(DedupConstants.JOB_TYPE, duplication.getType());
+			job.addParameter(DedupConstants.DATETIME, duplication.getDatetime());
 			job.addParameter(DedupConstants.PATH, duplication.getPath());
 			job.addParameter(DedupConstants.NEW_SOURCE_DIR, String.format("%s/%s", duplication.getNewSource(), duplication.getPath()));
 			job.addParameter(DedupConstants.SOURCE_DIR, String.format("%s/%s", duplication.getSource(), duplication.getPath()));
 			job.addParameter(DedupConstants.OUTPUT_PATH, String.format("%s/%s", "/dedup", duplication.getType()));
 			job.addParameter(DedupConstants.RESULT_PATH, duplication.getSource());
+			job.addParameter(DedupConstants.LOCK, String.format("%s/%s", duplication.getType(), 
+					duplication.getDatetime().substring(0, duplication.getDatetime().length() - 2)));
 			
 			String preffixOfClass = Character.toUpperCase(duplication.getType().charAt(0)) + duplication.getType().substring(1);
 			job.addParameter(DedupConstants.MR_CLASS, String.format("com.nexr.rolling.core.%sDedupMr", preffixOfClass));
@@ -105,7 +108,7 @@ public class DedupManager implements Runnable, IZkChildListener {
 		if (currentChilds != null) {
 			for (String child : currentChilds) {
 				if (!duplications.containsKey(child)) {
-					Object json = client.readData(String.format("%s/%s", DEDUP_QUEUE, child));
+					Object json = client.readData(String.format("%s/%s", config.getZkDedupQueue(), child));
 					if (json != null) {
 						Duplication duplication = Duplication.JsonDeserializer.deserialize(json.toString());
 						queue.add(duplication);

@@ -26,13 +26,17 @@ public class FlowJob extends AbstractJob {
 		Steps steps = getSteps();
 		
 		Step step = null;
+		Step lastStep = null;
 		if (execution.isRecoveryMode()) {
 			step = workflow.getFootprints().pop();
+			lastStep = step;
 		} else {
 			step = steps.first();
 		}
 		while (step != null) {
-			workflow.addStep(step);
+			if (!step.equals(lastStep)) {
+				workflow.addStep(step);
+			}
 			try {
 				if (steplistener != null) {
 					steplistener.beforeStep(step, context);

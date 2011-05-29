@@ -1,0 +1,21 @@
+<configuration>
+	<property>
+		<name>zk.servers</name>
+		<value>installer1:2181,installer2:2181,installer3:2181</value>
+	</property>
+	
+	<property>
+		<name>members.zk.path.base</name>
+		<value>/workflow/members</value>
+	</property>
+
+	<property>
+		<name>master.zk.path.base</name>
+		<value>/workflow/master</value>
+	</property>
+	
+	<property>
+		<name>workflow.zk.path.base</name>
+		<value>/workflow</value>
+	</property>
+</configuration>

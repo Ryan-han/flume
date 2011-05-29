@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.exception.ZkNoNodeException;
 import org.I0Itec.zkclient.exception.ZkNodeExistsException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -23,12 +22,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.retry.RetryCallback;
 import org.springframework.batch.retry.RetryContext;
-import org.springframework.batch.retry.RetryListener;
 import org.springframework.batch.retry.backoff.ExponentialBackOffPolicy;
-import org.springframework.batch.retry.listener.RetryListenerSupport;
 import org.springframework.batch.retry.policy.SimpleRetryPolicy;
 import org.springframework.batch.retry.support.RetryTemplate;
 
+import com.nexr.framework.workflow.Configuration;
 import com.nexr.framework.workflow.Job;
 import com.nexr.framework.workflow.JobExecution;
 import com.nexr.framework.workflow.JobExecutionDao;
@@ -45,32 +43,16 @@ import com.nexr.framework.workflow.Workflow;
  * @author dani.kim@nexr.com
  */
 public class ZKJobExecutionDao implements JobExecutionDao {
-	private static final String COMPLETE = "/rolling/jobs/complete";
-	private static final String RUNNING = "/rolling/jobs/running";
-	private static final String OUTAGE = "/rolling/jobs/outage";
+	private Configuration config = Configuration.getInstance();
+	private final String COMPLETE = config.getZkWorkflowComplete();
+	private final String ABANDONE = config.getZkWorkflowAbandone();
+	private final String RUNNING = config.getZkWorkflowRunning();
+	private final String OUTAGE = config.getZkWorkflowOutage();
 
 	private Logger LOG = LoggerFactory.getLogger("zk.log");
 	
 	private ZkClient client = ZkClientFactory.getClient();
 	private RetryTemplate retryTemplate;
-	
-	private RetryListenerSupport retryListener = new RetryListenerSupport() {
-		public <T extends Object> void onError(RetryContext context, org.springframework.batch.retry.RetryCallback<T> callback, Throwable throwable) {
-			if (throwable instanceof ZkNoNodeException) {
-				if (!client.exists(RUNNING)) {
-					client.createPersistent(RUNNING, true);
-				}
-				if (!client.exists(COMPLETE)) {
-					client.createPersistent(COMPLETE, true);
-				}
-				if (!client.exists(OUTAGE)) {
-					client.createPersistent(OUTAGE, true);
-				}
-			} else {
-				throwable.printStackTrace();
-			}
-		}
-	};
 	
 	public ZKJobExecutionDao() {
 		retryTemplate = new RetryTemplate();
@@ -79,7 +61,19 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		retryableExceptions.put(Exception.class, true);
 		retryableExceptions.put(ZkNodeExistsException.class, false);
 		retryTemplate.setRetryPolicy(new SimpleRetryPolicy(10, retryableExceptions));
-		retryTemplate.setListeners(new RetryListener[] { retryListener });
+	}
+	
+	@Override
+	public JobExecution findJobExecutionById(String jobId) {
+		if (jobId != null) {
+			try {
+				Object data = client.readData(String.format("%s/%s", RUNNING, jobId));
+				JobExecution execution = readJobExecution(data.toString());
+				return execution;
+			} catch (Exception e) {
+			}
+		}
+		return null;
 	}
 	
 	@Override
@@ -124,14 +118,18 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		final JobExecution execution = new JobExecution(job);
 		context.setJobExecution(execution);
 		execution.setKey(key);
-		execution.setStatus(JobStatus.STARTING);
+		execution.setStatus(JobStatus.PENDING);
 		execution.setContext(context);
 		execution.setWorkflow(new Workflow(job));
 		try {
 			retryTemplate.execute(new RetryCallback<String>() {
 				@Override
 				public String doWithRetry(RetryContext context) throws Exception {
-					client.createPersistent(createZNodePath(execution), createJobExecution(execution));
+					String node = createZNodePath(execution);
+					if (!client.exists(node)) {
+						client.createPersistent(node);
+					}
+					client.writeData(node, createJobExecution(execution));
 					return null;
 				}
 			});
@@ -148,6 +146,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		root.put("name", execution.getJob().getName());
 		root.put("status", execution.getStatus().name());
 		root.put("timestamp", System.currentTimeMillis());
+		root.put("retryCount", execution.getRetryCount());
 		root.put("version", 1);
 		ObjectNode parameters = root.putObject("parameters");
 		for (String key : execution.getContext().getConfig().keys()) {
@@ -173,11 +172,14 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			retryTemplate.execute(new RetryCallback<String>() {
 				@Override
 				public String doWithRetry(RetryContext context) throws Exception {
-					if (execution.getStatus() != null && execution.getStatus() == JobStatus.STARTED) {
+					if (execution.getStatus() != null && execution.getStatus() == JobStatus.STARTING) {
 						String outageNode = String.format("%s/%s", OUTAGE, execution.getKey());
 						if (!client.exists(outageNode)) {
 							client.createEphemeral(outageNode);
 						}
+					}
+					if (!client.exists(createZNodePath(execution))) {
+						client.createPersistent(createZNodePath(execution), true);
 					}
 					client.writeData(createZNodePath(execution), createJobExecution(execution));
 					return null;
@@ -193,7 +195,15 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 	public JobExecution completeJob(JobExecution execution) {
 		execution.setStatus(JobStatus.COMPLETED);
 		updateJobExecution(execution);
-		removeJob(execution.getJob());
+		removeJob(COMPLETE, execution.getJob());
+		return execution;
+	}
+	
+	@Override
+	public JobExecution failJob(JobExecution execution) {
+		execution.setStatus(JobStatus.ABANDONED);
+		updateJobExecution(execution);
+		removeJob(COMPLETE, execution.getJob());
 		return execution;
 	}
 	
@@ -201,7 +211,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 	public List<JobExecution> clearFailExecutions() {
 		List<JobExecution> executions = findFailExecutions();
 		for (JobExecution execution : executions) {
-			removeJob(execution.getJob());
+			removeJob(ABANDONE, execution.getJob());
 		}
 		return executions;
 	}
@@ -212,11 +222,8 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			return retryTemplate.execute(new RetryCallback<StepExecution>() {
 				@Override
 				public StepExecution doWithRetry(RetryContext context) throws Exception {
-//					String parent = createZNodePath(execution);
-//					client.createPersistentSequential(String.format("%s/step-", parent), writeStep(step));
 					updateJobExecution(execution);
-					StepExecution stepExecution = new StepExecution();
-					return stepExecution;
+					return new StepExecution();
 				}
 			});
 		} catch (Exception e) {
@@ -258,6 +265,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 			execution.setJob(job);
 			execution.setStatus(JobStatus.valueOf(root.path("status").getTextValue()));
 			execution.setWorkflow(new Workflow(job.getSteps(), readSteps(root.path("workflow").path("footprints"))));
+			execution.setRetryCount(root.path("retryCount").getIntValue());
 
 			StepContext context = new StepContext();
 			context.setJobExecution(execution);
@@ -343,7 +351,7 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 		return node;
 	}
 
-	public void removeJob(Job job) {
+	public void removeJob(final String path, Job job) {
 		final String key = createJobKey(job.getName(), job.getParameters());
 		try {
 			String backup = retryTemplate.execute(new RetryCallback<String>() {
@@ -353,13 +361,13 @@ public class ZKJobExecutionDao implements JobExecutionDao {
 						return null;
 					}
 					Object data = client.readData(createZNodePath(key));
-					String backup = String.format("%s/%s", COMPLETE, key);
+					String backup = String.format("%s/%s", path, key);
 					if (!client.exists(backup)) {
 						client.delete(backup);
 					}
-					client.delete(String.format("%s/%s", OUTAGE, key));
 					client.createPersistent(backup, data);
 					client.delete(createZNodePath(key));
+					client.delete(String.format("%s/%s", OUTAGE, key));
 					return backup;
 				}
 			});

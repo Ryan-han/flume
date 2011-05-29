@@ -13,6 +13,9 @@ import org.slf4j.LoggerFactory;
 import com.nexr.framework.workflow.StepContext;
 import com.nexr.rolling.workflow.RetryableDFSTaskletSupport;
 import com.nexr.rolling.workflow.RollingConstants;
+import com.nexr.rolling.workflow.ZkClientFactory;
+import com.nexr.rolling.workflow.ZkClientFactory.Lock;
+import com.nexr.rolling.workflow.ZkClientFactory.ZkLockClient;
 
 /**
  * 기초 데이터를 넣어주는 작업을 한다.
@@ -23,6 +26,8 @@ import com.nexr.rolling.workflow.RollingConstants;
 public class PrepareTasklet extends RetryableDFSTaskletSupport {
 	private Logger LOG = LoggerFactory.getLogger(getClass());
 
+	private ZkLockClient lockClient = ZkClientFactory.getLockClient();
+	
 	final public static PathFilter DATA_FILTER = new PathFilter() {
 		public boolean accept(Path file) {
 			return file.getName().endsWith(".done");
@@ -34,6 +39,9 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 		String jobType = context.getConfig().get(RollingConstants.JOB_TYPE, null);
 		LOG.info("Prepare for M/R. jobType: {}, jobId: {}", new Object[] { jobType, context.getJobExecution().getKey() });
 		Path sourcePath = new Path(context.get(RollingConstants.RAW_PATH, null));
+		
+		String lockName = context.getConfig().get(RollingConstants.PREV_JOB_TYPE, null);
+		Lock lock = lockClient.acquire(lockName == null ? null : String.format("/lock/rolling/%s", lockName));
 		try {
 			boolean isCollectorSource = context.getConfig().getBoolean(RollingConstants.IS_COLLECTOR_SOURCE, false);
 			Stats stats = new Stats();
@@ -42,10 +50,12 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 				LOG.info("Input Directory is empty. Input: {}", sourcePath.toString());
 				return "cleanUp";
 			}
-			LOG.info("Prepare stats - count: {}, length: {} bytes", stats.count.intValue(), stats.length.longValue());
+			LOG.info("Prepare stats - count: {}, length: {} MB", stats.count.intValue(), stats.length.longValue() / 1024 / 1024);
 			context.set(RollingConstants.INPUT_DEPTH, Integer.toString(depth));
 		} catch (IOException e) {
 			throw new RuntimeException(e);
+		} finally {
+			lock.unlock();
 		}
 		return "run";
 	}
@@ -54,16 +64,18 @@ public class PrepareTasklet extends RetryableDFSTaskletSupport {
 		int depth = 1;
 		if (files != null) {
 			for (FileStatus file : files) {
-				if (file.isDir()) {
+				if (file.isDir() && !file.getPath().getName().startsWith("_")) {
 					depth += renameTo(fs.listStatus(file.getPath()), String.format("%s/%s", destination, file.getPath().getName()), isCollectorSource, stats);
 				} else {
 					Path destinationPath = new Path(destination);
 					if (!fs.exists(destinationPath)) {
 						fs.mkdirs(destinationPath);
 					}
-					fs.rename(file.getPath(), destinationPath);
-					stats.count.incrementAndGet();
-					stats.length.addAndGet(file.getLen());
+					if (isCollectorSource == false || DATA_FILTER.accept(file.getPath())) {
+						fs.rename(file.getPath(), destinationPath);
+						stats.count.incrementAndGet();
+						stats.length.addAndGet(file.getLen());
+					}
 				}
 			}
 		}

@@ -10,6 +10,7 @@ public class JobExecution {
 	private StepContext context;
 	private Workflow workflow;
 	private boolean recoveryMode;
+	private volatile int retryCount = 0;
 	
 	public JobExecution() {
 	}
@@ -65,6 +66,18 @@ public class JobExecution {
 
 	public void setKey(String key) {
 		this.key = key;
+	}
+	
+	public void incrementRetryCount() {
+		retryCount++;
+	}
+	
+	public int getRetryCount() {
+		return retryCount;
+	}
+	
+	public void setRetryCount(int retryCount) {
+		this.retryCount = retryCount;
 	}
 }
 

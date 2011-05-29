@@ -28,10 +28,12 @@ public class HourlyTask extends QuartzJobBean {
 		JobLauncher launcher = workflowManager.createLauncher();
 		RollingJob job = workflowManager.getJobFactory().createJob(RollingJob.class);
 		
+		String date = new SimpleDateFormat("yyyyMMddHH").format(new Date());
 		job.addParameter(RollingConstants.JOB_TYPE, "hourly");
+		job.addParameter(RollingConstants.PREV_JOB_TYPE, "post");
 		job.addParameter(RollingConstants.JOB_CLASS, job.getClass().getName());
 		job.addParameter(RollingConstants.MR_CLASS, HourlyRollingMr.class.getName());
-		job.addParameter(RollingConstants.DATETIME, new SimpleDateFormat("yyyy-MM-dd HH").format(new Date()));
+		job.addParameter(RollingConstants.DATETIME, date);
 		job.addParameter(RollingConstants.RAW_PATH, config.getResultDir(config.getRollingDir(), "post"));
 		job.addParameter(RollingConstants.INPUT_PATH, config.getInputDir(config.getRollingDir(), "hourly"));
 		job.addParameter(RollingConstants.OUTPUT_PATH, config.getOutputDir(config.getRollingDir(), "hourly"));

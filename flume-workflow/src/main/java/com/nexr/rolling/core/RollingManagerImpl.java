@@ -12,6 +12,9 @@ import org.apache.commons.daemon.DaemonContext;
 import org.apache.commons.daemon.DaemonInitException;
 import org.apache.log4j.Logger;
 
+import com.nexr.dedup.DedupManager;
+import com.nexr.framework.workflow.SpringWorkflowManager;
+import com.nexr.framework.workflow.WorkflowManager;
 import com.nexr.rolling.exception.RollingException;
 import com.nexr.rolling.schd.RollingScheduler;
 import com.nexr.rolling.workflow.ZkClientFactory;
@@ -26,31 +29,11 @@ public class RollingManagerImpl implements Daemon, RollingManager, IZkDataListen
 	RollingScheduler scheduler = null;
 	private String hostName = null;
 	
+	private WorkflowManager workflowManager = new SpringWorkflowManager();
+	private DedupManager dedupManager = new DedupManager();
 	
 	@Override
 	public void init(DaemonContext daemonContext) throws DaemonInitException, Exception {
-		hostName = getLocalhostName();
-		scheduler = new RollingScheduler();
-
-		announceNode();
-		masterRegister();
-		
-		zkClient.subscribeChildChanges(config.getZkMembersBase(), this);
-		zkClient.subscribeChildChanges(config.getZkMasterBase(), this);
-		try {
-			zkClient.getEventLock().lock();
-			if (zkClient.exists(config.getZkConfigBase())) {
-				zkClient.subscribeDataChanges(config.getZkConfigBase(), this);
-				config = this.zkClient.readData(config.getZkConfigBase());
-			}
-			if (isMaster) {
-				startMaster();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			this.zkClient.getEventLock().unlock();
-		}
 	}
 	
 	@Override
@@ -90,10 +73,36 @@ public class RollingManagerImpl implements Daemon, RollingManager, IZkDataListen
 
 	@Override
 	public void start() throws Exception {
+		new Thread(workflowManager).start();
+		new Thread(dedupManager).start();
+		hostName = getLocalhostName();
+		scheduler = new RollingScheduler();
+
+		announceNode();
+		masterRegister();
+		
+		zkClient.subscribeChildChanges(config.getZkMembersBase(), this);
+		zkClient.subscribeChildChanges(config.getZkMasterBase(), this);
+		try {
+			zkClient.getEventLock().lock();
+			if (zkClient.exists(config.getZkConfigBase())) {
+				zkClient.subscribeDataChanges(config.getZkConfigBase(), this);
+				config = this.zkClient.readData(config.getZkConfigBase());
+			}
+			if (isMaster) {
+				startMaster();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			this.zkClient.getEventLock().unlock();
+		}
 	}
 
 	@Override
 	public void stop() throws Exception {
+		workflowManager.stop();
+		dedupManager.stop();
 		zkClient.delete(config.getZkMemberNode(hostName));
 		if (zkClient.exists(config.getZkMasterNode(hostName))) {
 			zkClient.delete(config.getZkMasterNode(hostName));
@@ -113,7 +122,7 @@ public class RollingManagerImpl implements Daemon, RollingManager, IZkDataListen
 	private void announceNode() throws RollingException {
 		log.info("announce node  : " + hostName);
 		if (!zkClient.exists(config.getZkMembersBase())){
-			zkClient.createPersistent(config.getZkMembersBase());
+			zkClient.createPersistent(config.getZkMembersBase(), true);
 		}
 		
 	    String nodePath = config.getZkMemberNode(hostName);

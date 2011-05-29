@@ -6,10 +6,11 @@ import java.util.List;
 /**
  * @author dani.kim@nexr.com
  */
-public class Configuration extends com.nexr.framework.conf.Configuration {
+public class Configuration extends com.nexr.framework.workflow.Configuration {
 	private static Configuration instance = new Configuration();
 	
 	static {
+		addDefaultResource("workflow-site.xml");
 		addDefaultResource("sdp-default.xml");
 		addDefaultResource("sdp-site.xml");
 	}
@@ -59,6 +60,10 @@ public class Configuration extends com.nexr.framework.conf.Configuration {
 	
 	public String getZkDedupBase() {
 		return get("dedup.zk.path.base", "/dedup");
+	}
+	
+	public String getZkDedupQueue() {
+		return String.format("%s/queue", getZkDedupBase());
 	}
 	
 	public String getZkNotifyBase() {

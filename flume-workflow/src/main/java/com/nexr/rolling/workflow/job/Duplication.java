@@ -7,6 +7,7 @@ import org.codehaus.jackson.map.ObjectMapper;
  */
 public class Duplication {
 	private String type;
+	private String datetime;
 	private String newSource;
 	private String source;
 	private String path;
@@ -34,8 +35,9 @@ public class Duplication {
 	public Duplication() {
 	}
 
-	public Duplication(String type, String newSource, String source, String path) {
+	public Duplication(String type, String datetime, String newSource, String source, String path) {
 		this.type = type;
+		this.datetime = datetime;
 		this.newSource = newSource;
 		this.source = source;
 		this.path = path;
@@ -47,6 +49,14 @@ public class Duplication {
 	
 	public void setType(String type) {
 		this.type = type;
+	}
+	
+	public String getDatetime() {
+		return datetime;
+	}
+	
+	public void setDatetime(String datetime) {
+		this.datetime = datetime;
 	}
 	
 	public String getNewSource() {
