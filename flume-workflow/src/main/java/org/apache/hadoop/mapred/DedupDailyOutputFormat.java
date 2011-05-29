@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Date;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -76,7 +77,13 @@ public class DedupDailyOutputFormat<Text extends WritableComparable, LogRecord>
 		String dataType = key.toString().substring(key.toString().lastIndexOf("_")+1, key.toString().length());
 		String tmp = key.toString().substring(0, key.toString().lastIndexOf("_"));
 		String timeStamp = tmp.substring(tmp.lastIndexOf("_")+1, tmp.length());
-		return dataType+File.separator+ sdf.format(new Date(Long.parseLong(timeStamp)))+File.separator+prefix;
+		long t = 0;
+		try {
+			t = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").parse(timeStamp).getTime();
+		} catch (ParseException e) {
+			t = Long.parseLong(timeStamp);
+		}
+		return dataType+File.separator+ sdf.format(new Date(t))+File.separator+prefix;
 	}
 
 	@Override

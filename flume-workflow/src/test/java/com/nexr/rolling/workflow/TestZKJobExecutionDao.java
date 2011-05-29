@@ -72,7 +72,7 @@ public class TestZKJobExecutionDao extends JobTestBase {
 			System.out.println(step);
 		}
 		Assert.assertNotNull(dao.getJobExecution(job));
-		dao.removeJob(job);
+		dao.removeJob("complete", job);
 		Assert.assertNull(dao.getJobExecution(job));
 	}
 }

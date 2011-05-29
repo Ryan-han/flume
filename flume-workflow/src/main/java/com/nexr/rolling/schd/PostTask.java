@@ -29,11 +29,12 @@ public class PostTask extends QuartzJobBean {
 		RollingJob job = workflowManager.getJobFactory().createJob(RollingJob.class);
 		
 		job.addParameter(RollingConstants.JOB_TYPE, "post");
+		job.addParameter(RollingConstants.PREV_JOB_TYPE, "collector");
 		job.addParameter(RollingConstants.IS_COLLECTOR_SOURCE, "true");
 		job.addParameter(RollingConstants.TODAY_PATH, config.getTodayPath());
 		job.addParameter(RollingConstants.JOB_CLASS, job.getClass().getName());
 		job.addParameter(RollingConstants.MR_CLASS, PostRollingMr.class.getName());
-		job.addParameter(RollingConstants.DATETIME, new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date()));
+		job.addParameter(RollingConstants.DATETIME, new SimpleDateFormat("yyyyMMddHHmm").format(new Date()));
 		job.addParameter(RollingConstants.RAW_PATH, config.getCollectorSource());
 		job.addParameter(RollingConstants.INPUT_PATH, config.getInputDir(config.getRollingDir(), "post"));
 		job.addParameter(RollingConstants.OUTPUT_PATH, config.getOutputDir(config.getRollingDir(), "post"));

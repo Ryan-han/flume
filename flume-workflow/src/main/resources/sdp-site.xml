@@ -66,16 +66,16 @@
 	
 	<property>
 		<name>schedule.post</name>
-		<value>0 * * * * ?</value>
+		<value>0 0/3 * * * ?</value>
 	</property>
 
 	<property>
 		<name>schedule.hourly</name>
-		<value>20 0 * * * ?</value>
+		<value>0 20,40 * * * ?</value>
 	</property>
 	
 	<property>
 		<name>schedule.daily</name>
-		<value>40 0 0 * * ?</value>
+		<value>0 0 * * * ?</value>
 	</property>
 </configuration>

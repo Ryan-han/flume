@@ -41,12 +41,22 @@ public class InMemoryJobExecutionDao implements JobExecutionDao {
 		execution.setStatus(JobStatus.COMPLETED);
 		return updateJobExecution(execution);
 	}
+	
+	@Override
+	public JobExecution failJob(JobExecution execution) {
+		return null;
+	}
 
 	@Override
 	public StepExecution updateStepExecution(JobExecution execution, Step step) {
 		updateJobExecution(execution);
 		StepExecution stepExecution = new StepExecution();
 		return stepExecution;
+	}
+	
+	@Override
+	public JobExecution findJobExecutionById(String jobId) {
+		return null;
 	}
 
 	@Override

@@ -5,7 +5,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
 /**
  * @author dani.kim@nexr.com
  */
-public class SpringWorkflowManager implements WorkflowManager {
+public class SpringWorkflowManager extends WorkflowManager {
 	private static ClassPathXmlApplicationContext ctx;
 	private static JobFactory jobFactory;
 	
@@ -22,5 +22,10 @@ public class SpringWorkflowManager implements WorkflowManager {
 	@Override
 	public JobFactory getJobFactory() {
 		return jobFactory;
+	}
+	
+	@Override
+	public JobExecutionDao getExecutionDao() {
+		return ctx.getBean(JobExecutionDao.class);
 	}
 }

@@ -44,8 +44,7 @@ public abstract class AbstractJob implements Job {
 
 	@Override
 	public String toString() {
-		return new StringBuilder().append("job[name: ").append(name)
-				.append("]").toString();
+		return new StringBuilder().append("job[name: ").append(name).append("]").toString();
 	}
 
 	@Override
@@ -57,6 +56,8 @@ public abstract class AbstractJob implements Job {
 		} catch (Exception e) {
 			LOG.warn("exception encountered in beforeJob callback", e);
 		}
+		execution.setStatus(JobStatus.STARTED);
+		executionDao.updateJobExecution(execution);
 		doExecute(execution);
 		try {
 			if (joblistener != null) {

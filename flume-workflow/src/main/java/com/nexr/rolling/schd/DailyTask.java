@@ -27,16 +27,18 @@ public class DailyTask extends QuartzJobBean {
 		Configuration config = Configuration.getInstance();
 		JobLauncher launcher = workflowManager.createLauncher();
 		RollingJob job = workflowManager.getJobFactory().createJob(RollingJob.class);
-		
+
+		String date = new SimpleDateFormat("yyyyMMdd").format(new Date());
 		job.addParameter(RollingConstants.JOB_TYPE, "daily");
+		job.addParameter(RollingConstants.PREV_JOB_TYPE, "hourly");
 		job.addParameter(RollingConstants.JOB_CLASS, job.getClass().getName());
 		job.addParameter(RollingConstants.MR_CLASS, DailyRollingMr.class.getName());
-		job.addParameter(RollingConstants.DATETIME, new SimpleDateFormat("yyyy-MM-dd").format(new Date()));
+		job.addParameter(RollingConstants.DATETIME, date);
 		job.addParameter(RollingConstants.RAW_PATH, config.getResultDir(config.getRollingDir(), "hourly"));
 		job.addParameter(RollingConstants.INPUT_PATH, config.getInputDir(config.getRollingDir(), "daily"));
 		job.addParameter(RollingConstants.OUTPUT_PATH, config.getOutputDir(config.getRollingDir(), "daily"));
 		job.addParameter(RollingConstants.RESULT_PATH, config.getResultDir(config.getRollingDir(), "daily"));
-		
+
 		try {
 			launcher.run(job);
 		} catch (com.nexr.framework.workflow.JobExecutionException e) {

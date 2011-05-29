@@ -59,7 +59,7 @@ public class PostDedupMr extends Configured implements Tool {
 		jobConf.setOutputFormat(DedupPostOutputFormat.class);
 		jobConf.setOutputKeyClass(LogRecordKey.class);
 		jobConf.setOutputValueClass(LogRecord.class);
-		jobConf.setNumReduceTasks(3);
+		jobConf.setNumReduceTasks(Integer.parseInt(args[3]));
 //		FileInputFormat.setInputPaths(jobConf, args[0]);
 		FileInputFormat.addInputPath(jobConf, new Path(args[0]));
 		FileInputFormat.addInputPath(jobConf, new Path(args[1]));
