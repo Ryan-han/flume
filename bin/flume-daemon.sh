@@ -95,10 +95,9 @@ case $startStop in
     flume_rotate_log $log
     echo starting $command, logging to $log
     cd "$FLUME_HOME"
-#    nohup  nice -n ${FLUME_NICENESS} "${FLUME_HOME}"/bin/flume $command "$@" > "$log" 2>&1 < /dev/null &
-    nohup  nice -n ${FLUME_NICENESS} "${FLUME_HOME}"/bin/flume $command "$@" > /dev/null &
+    nohup  nice -n ${FLUME_NICENESS} "${FLUME_HOME}"/bin/flume $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
-#    sleep 1; head "$log"
+    sleep 1; head "$log"
     ;;
           
   (stop)
